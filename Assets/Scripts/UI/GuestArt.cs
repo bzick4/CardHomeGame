@@ -12,16 +12,8 @@ namespace CardHome
     // Фон карты — Art/Cards/Backdrop.png, рубашка — Art/Cards/Back.png.
     public static class GuestArt
     {
-        static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
-
-        static Sprite Get(string key, Func<Sprite> make)
-        {
-            if (cache.TryGetValue(key, out var s) && s != null) return s;
-            s = Resources.Load<Sprite>("Art/Cards/" + key);
-            if (s == null) s = make();
-            cache[key] = s;
-            return s;
-        }
+        // Файл из Resources/Art/Cards/<key>, иначе рисуем. Хранение и выгрузка — в ArtStore.
+        static Sprite Get(string key, Func<Sprite> make) => ArtStore.Get("Cards/" + key, make);
 
         public static Sprite Backdrop => Get("Backdrop", () => PaintBackdrop().Render(256, 320, 1f, 0.5f));
         public static Sprite Character(GuestDef g) => Get(g.Id, () => PaintCharacter(g.Id).Render(256, 256, 1.05f, 0.6f));

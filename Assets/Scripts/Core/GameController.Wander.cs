@@ -85,6 +85,7 @@ namespace CardHome
 
         void ShowMap()
         {
+            LeaveGameView();
             if (view == null || IsTutorial)
             {
                 IsTutorial = false;

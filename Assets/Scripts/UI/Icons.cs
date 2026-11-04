@@ -11,7 +11,6 @@ namespace CardHome
     public static class Icons
     {
         const int Size = 128;
-        static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
 
         public static Sprite Room(RoomType t) => Get("Rooms/" + t, () => PaintRoom(t));
         public static Sprite Guest(GuestDef g) => Get("Guests/" + g.Id, () => PaintGuest(g.Id));
@@ -20,21 +19,7 @@ namespace CardHome
         public static Sprite Crack => Get("Crack", PaintCrack);
         // Нарисованный бланк карты комнаты: Assets/Resources/Art/RoomCards/<Тип>.png (без текста — его пишет игра).
         // Нет картинки — null, и карта рисуется кодом, как раньше.
-        public static Sprite RoomCard(RoomType t)
-        {
-            string key = "RoomCards/" + t;
-            if (optional.TryGetValue(key, out var s)) return s;
-            s = Resources.Load<Sprite>("Art/" + key);
-            if (s == null)
-            {
-                var tex = Resources.Load<Texture2D>("Art/" + key);
-                if (tex != null) s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100);
-            }
-            optional[key] = s;
-            return s;
-        }
-
-        static readonly Dictionary<string, Sprite> optional = new Dictionary<string, Sprite>();
+        public static Sprite RoomCard(RoomType t) => ArtStore.Get("RoomCards/" + t, null);
 
         public static Sprite Coin => Get("Coin", () => new Painter().Circle(0, 0, 0.8f, Gold).Circle(0, 0, 0.5f, H("ffe27a"), false).Box(0, 0, 0.12f, 0.36f, 0.05f, H("e0a91f"), false));
 
@@ -52,14 +37,8 @@ namespace CardHome
             return p;
         }
 
-        static Sprite Get(string key, Func<Painter> paint)
-        {
-            if (cache.TryGetValue(key, out var s) && s != null) return s;
-            s = Resources.Load<Sprite>("Art/" + key);
-            if (s == null) s = paint().Render(Size);
-            cache[key] = s;
-            return s;
-        }
+        // Файл из Resources/Art/<key>, иначе рисуем. Хранение и выгрузка — в ArtStore.
+        static Sprite Get(string key, Func<Painter> paint) => ArtStore.Get(key, () => paint().Render(Size));
 
         static Color H(string hex) => RoomDatabase.Hex(hex);
 

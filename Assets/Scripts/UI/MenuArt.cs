@@ -8,16 +8,8 @@ namespace CardHome
     // Свой арт: Assets/Resources/Art/Menu/<Имя>.png (Gear, Back, Flag и т.д.).
     public static class MenuArt
     {
-        static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
-
-        static Sprite Get(string key, Func<Sprite> make)
-        {
-            if (cache.TryGetValue(key, out var s) && s != null) return s;
-            s = Resources.Load<Sprite>("Art/Menu/" + key);
-            if (s == null) s = make();
-            cache[key] = s;
-            return s;
-        }
+        // Файл из Resources/Art/Menu/<key>, иначе рисуем. Хранение и выгрузка — в ArtStore.
+        static Sprite Get(string key, Func<Sprite> make) => ArtStore.Get("Menu/" + key, make);
 
         static Color H(string hex) => RoomDatabase.Hex(hex);
 
@@ -30,21 +22,7 @@ namespace CardHome
         // true — отзеркалить картинку; название и кнопки сами переедут на другую сторону.
         public const bool MirrorBackground = false;
 
-        static readonly Dictionary<string, Sprite> art = new Dictionary<string, Sprite>();
-
-        static Sprite LoadArt(string name)
-        {
-            if (art.TryGetValue(name, out var s)) return s;
-            s = Resources.Load<Sprite>("Art/Menu/" + name);
-            if (s == null)
-            {
-                // Если картинку импортировали как обычную текстуру — сделаем спрайт сами.
-                var tex = Resources.Load<Texture2D>("Art/Menu/" + name);
-                if (tex != null) s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100);
-            }
-            art[name] = s;
-            return s;
-        }
+        static Sprite LoadArt(string name) => ArtStore.Get("Menu/" + name, null);
 
         public static Sprite Background => LoadArt("Background");
         public static Sprite BackgroundWide => LoadArt("BackgroundWide");
@@ -61,20 +39,7 @@ namespace CardHome
         //   NodeHouse / NodeFair / NodeRest / NodeEvent / NodeElite / NodeBoss.png — точка целиком
         //   (постамент со значком на прозрачном фоне). Если картинки нет — рисуем кодом.
 
-        static readonly Dictionary<string, Sprite> wander = new Dictionary<string, Sprite>();
-
-        public static Sprite WanderArt(string name)
-        {
-            if (wander.TryGetValue(name, out var s)) return s;
-            s = Resources.Load<Sprite>("Art/Wander/" + name);
-            if (s == null)
-            {
-                var tex = Resources.Load<Texture2D>("Art/Wander/" + name);
-                if (tex != null) s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100);
-            }
-            wander[name] = s;
-            return s;
-        }
+        public static Sprite WanderArt(string name) => ArtStore.Get("Wander/" + name, null);
 
         // Каменный постамент с золотой табличкой и звездой — подставка для значка точки.
         public static Sprite Pedestal => WanderArt("Pedestal") ?? Get("PedestalPainted", () =>

@@ -185,16 +185,52 @@ namespace CardHome
 
         // ───────────── Меню ─────────────
 
+        // ───────────── Загрузка ─────────────
+        // Партия и меню не живут одновременно: из партии в меню — партия снимается с экрана и её картинки
+        // выгружаются; перед домом — меню снимается, а картинки дома готовятся под экраном загрузки.
+
+        bool loading;
+
+        static bool InGamePhase(Phase p) =>
+            p == Phase.Day || p == Phase.Night || p == Phase.Summary || p == Phase.Reward || p == Phase.LevelDone || p == Phase.GameOver;
+
+        void LeaveGameView()
+        {
+            if (view == null || !InGamePhase(State)) return;
+            ResetView();
+            ArtStore.Release(ArtScope.Level);
+        }
+
+        void LoadThen(LevelInfo level, string title, Action start)
+        {
+            if (loading) return;
+            loading = true;
+            ResetView();
+            ArtStore.Release(ArtScope.Screen);
+            ArtStore.Release(ArtScope.Level);
+            var screen = LoadingScreen.Show(title);
+            ArtStore.Preload(ArtStore.ForLevel(level, Progress.EquippedBack), screen.SetProgress, () =>
+            {
+                loading = false;
+                // Уже партия: интерфейс создаётся без экранов меню.
+                State = Phase.Day;
+                start();
+                screen.Hide();
+            });
+        }
+
         public void ShowMenu()
         {
-            if (State == Phase.Night) return;
+            if (State == Phase.Night || loading) return;
             if (State == Phase.Day && !IsTutorial) SaveRun();
             if (IsTutorial)
             {
                 IsTutorial = false;
                 Gate = null;
                 ResetView();
+                ArtStore.Release(ArtScope.Level);
             }
+            LeaveGameView();
             EnsureView();
             Selected = -1;
             MovingFrom = null;
@@ -204,6 +240,8 @@ namespace CardHome
 
         public void ShowLevels()
         {
+            if (loading) return;
+            LeaveGameView();
             EnsureView();
             SetPhase(Phase.Levels);
             Changed?.Invoke();
@@ -296,7 +334,7 @@ namespace CardHome
 
         public void StartLevel(int index)
         {
-            if (!IsUnlocked(index)) return;
+            if (!IsUnlocked(index) || loading) return;
             IsWander = false;
             var level = HouseDatabase.Level(index);
             var cards = level.House.BuildDeck().Select(t => new Card(t))
@@ -304,8 +342,14 @@ namespace CardHome
             StartHouse(level, cards, level.StartReputation, level.House.StartGold);
         }
 
-        // Общий старт дома — и для кампании, и для странствия.
+        // Общий старт дома — и для кампании, и для странствия: сначала загрузка его картинок.
         void StartHouse(LevelInfo level, IEnumerable<Card> cards, int reputation, int gold)
+        {
+            var list = cards.ToList();
+            LoadThen(level, level.Title, () => StartHouseNow(level, list, reputation, gold));
+        }
+
+        void StartHouseNow(LevelInfo level, IEnumerable<Card> cards, int reputation, int gold)
         {
             ResetView();
             IsTutorial = false;
@@ -348,6 +392,12 @@ namespace CardHome
         {
             var save = SaveSystem.LoadRun();
             if (save == null) return;
+            var level = HouseDatabase.Level(save.Level);
+            LoadThen(level, level.Title, () => ContinueRunNow(save));
+        }
+
+        void ContinueRunNow(RunSave save)
+        {
             IsWander = false;
             ResetView();
             IsTutorial = false;
@@ -424,7 +474,9 @@ namespace CardHome
 
         // ───────────── Обучение (день 0) ─────────────
 
-        public void StartTutorial()
+        public void StartTutorial() => LoadThen(HouseDatabase.Level(0), "Обучение", StartTutorialNow);
+
+        void StartTutorialNow()
         {
             IsWander = false;
             ResetView();
@@ -463,6 +515,7 @@ namespace CardHome
             IsTutorial = false;
             Gate = null;
             ResetView();
+            ArtStore.Release(ArtScope.Level);
             EnsureView();
             SetPhase(Phase.Levels);
             Changed?.Invoke();

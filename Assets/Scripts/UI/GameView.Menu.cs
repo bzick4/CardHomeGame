@@ -25,17 +25,31 @@ namespace CardHome
             return o;
         }
 
+        // Экраны вне партии строятся, только когда открыты: во время партии их нет,
+        // и их фоны не держатся в памяти (меню и партия никогда не живут в одном интерфейсе одновременно).
+        static bool MenuPhase(Phase p) =>
+            p == Phase.Menu || p == Phase.Levels || p == Phase.Map || p == Phase.Fair || p == Phase.Rest || p == Phase.Event;
+
         void BuildMenus()
         {
+            if (!MenuPhase(game.State)) return;
+            EnsureMenus();
+            ShowMenus(game.State, false);
+        }
+
+        void EnsureMenus()
+        {
+            if (menuRoot != null) return;
             BuildMainMenu();
             BuildLevelSelect();
             BuildBacks();
             BuildWander();
-            ShowMenus(game.State, false);
         }
 
         void ShowMenus(Phase phase, bool animate)
         {
+            if (MenuPhase(phase)) EnsureMenus();
+            if (menuRoot == null) return;
             bool menu = phase == Phase.Menu, levels = phase == Phase.Levels;
             bool wasMenu = menuRoot.gameObject.activeSelf, wasLevels = levelsRoot.gameObject.activeSelf;
             menuRoot.gameObject.SetActive(menu);
@@ -52,6 +66,7 @@ namespace CardHome
 
         void RefreshMenus()
         {
+            if (menuRoot == null) return;
             if (menuRoot.gameObject.activeSelf) RefreshMainMenu();
             if (levelsRoot.gameObject.activeSelf) RefreshLevels();
             if (backsRoot.gameObject.activeSelf) RefreshBacks();

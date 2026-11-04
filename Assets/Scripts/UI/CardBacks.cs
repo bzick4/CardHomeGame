@@ -67,16 +67,8 @@ namespace CardHome
 
         // ───────────── Отрисовка ─────────────
 
-        static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
-
-        static Sprite Get(string key, Func<Sprite> make)
-        {
-            if (cache.TryGetValue(key, out var s) && s != null) return s;
-            s = Resources.Load<Sprite>("Art/Backs/" + key);
-            if (s == null) s = make();
-            cache[key] = s;
-            return s;
-        }
+        // Файл из Resources/Art/Backs/<key>, иначе рисуем. Хранение и выгрузка — в ArtStore.
+        static Sprite Get(string key, Func<Sprite> make) => ArtStore.Get("Backs/" + key, make);
 
         public static Sprite ThemeSprite(int theme) => Get("Theme" + theme, () => PaintTheme(theme).Render(160, 224, 1f, 0.4f));
         public static Sprite FrameSprite(int tier) => Get("Frame" + tier, () => PaintFrame(tier).Render(176, 246, FramePad, 0.5f));
