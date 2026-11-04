@@ -84,7 +84,7 @@ namespace CardHome
             Add(RoomType.Hall, "Прихожая", "Вход. Отсюда гости начинают обход.",
                 Doors.N | Doors.E | Doors.W, Hex("8a7f72"));
             Add(RoomType.Corridor, "Коридор", "Ничего не даёт, но гость проходит его, не уставая.",
-                Doors.N | Doors.S, Hex("6f6a63"));
+                Doors.N | Doors.E | Doors.S, Hex("6f6a63"));
             Add(RoomType.Crossroad, "Перекрёсток", "Коридор на 4 двери. Не тратит выносливость.",
                 Doors.N | Doors.E | Doors.S | Doors.W, Hex("6f6a63"));
             Add(RoomType.Kitchen, "Кухня", "Путнику +2, учёному +1. Рядом столовая: ×2. Цель волка!",
@@ -92,21 +92,21 @@ namespace CardHome
             Add(RoomType.Dining, "Столовая", "+1 любому гостю.",
                 Doors.E | Doors.S | Doors.W, Hex("b9934f"));
             Add(RoomType.Bedroom, "Спальня", "Путнику +3, учёному +1. Рядом подвал: кошмары −3.",
-                Doors.S, Hex("6c7fb0"));
+                Doors.N | Doors.E | Doors.S, Hex("6c7fb0"));
             Add(RoomType.Bath, "Ванная", "Путнику +2, учёному +1.",
-                Doors.S, Hex("5aa3a8"));
+                Doors.E | Doors.S | Doors.W, Hex("5aa3a8"));
             Add(RoomType.Library, "Библиотека", "Учёному +3, призраку +1, путнику −1.",
-                Doors.N | Doors.S, Hex("7a5c8f"));
+                Doors.N | Doors.S | Doors.W, Hex("7a5c8f"));
             Add(RoomType.Fireplace, "Камин", "Соседние комнаты тёплые: +1 (призраку −1).",
                 Doors.N | Doors.E | Doors.S | Doors.W, Hex("c4553f"));
             Add(RoomType.Cellar, "Подвал", "Призраку +2. Соседним спальням снятся кошмары.",
-                Doors.S, Hex("4d4a45"));
+                Doors.E | Doors.S | Doors.W, Hex("4d4a45"));
             Add(RoomType.Trap, "Ловушка", "Ловит вора и волка (+золото). Обычному гостю −3.",
-                Doors.N | Doors.S, Hex("8f3b3b"));
+                Doors.N | Doors.E | Doors.S, Hex("8f3b3b"));
             Add(RoomType.Treasury, "Сокровищница", "+2 золота каждую ночь. Цель вора!",
-                Doors.S, Hex("c9a93a"));
+                Doors.E | Doors.S | Doors.W, Hex("c9a93a"));
             Add(RoomType.Nursery, "Детская", "Призраку +4, учёному −2.",
-                Doors.S | Doors.E, Hex("d68aa0"));
+                Doors.E | Doors.S | Doors.W, Hex("d68aa0"));
             Add(RoomType.Lounge, "Гостиная", "+2 любому гостю. Бывает только в наградах.",
                 Doors.E | Doors.S | Doors.W, Hex("5f9e6e"));
         }

@@ -109,6 +109,16 @@ namespace CardHome
             return b;
         }
 
+        // Картинка заполняет родителя целиком без искажений (лишнее по краям обрезает маска родителя).
+        public static void Cover(Image img)
+        {
+            Stretch(img.rectTransform);
+            if (img.sprite == null) return;
+            var fit = img.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fit.aspectRatio = img.sprite.rect.width / img.sprite.rect.height;
+        }
+
         public static void Stretch(RectTransform rt, float pad = 0)
         {
             rt.anchorMin = Vector2.zero;

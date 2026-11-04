@@ -396,7 +396,7 @@ namespace CardHome
                 window.gameObject.AddComponent<RectMask2D>();
                 var sky = UIKit.Image("Sky", window, Color.white, GuestArt.Backdrop);
                 sky.raycastTarget = false;
-                UIKit.Stretch(sky.rectTransform);
+                UIKit.Cover(sky);
                 var hero = UIKit.Image("Hero", window, Color.white, GuestArt.Character(GuestDatabase.ById(ev.GuestId)));
                 hero.raycastTarget = false;
                 hero.preserveAspect = true;

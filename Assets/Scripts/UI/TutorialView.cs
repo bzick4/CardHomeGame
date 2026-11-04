@@ -138,7 +138,8 @@ namespace CardHome
             });
             steps.Add(new Step
             {
-                Text = "У спальни одна дверь — снизу. Справа от прихожей ей нужна дверь <b>слева</b>.\n\n" +
+                Text = "У каждой комнаты три двери и одна глухая стена. У спальни глухая — слева, а справа от прихожей " +
+                       "ей нужна дверь именно <b>слева</b>.\n\n" +
                        "Нажми <b>«Повернуть»</b> (или коснись карты ещё раз).",
                 Target = () => view.RotateRect,
                 Gate = g =>
@@ -146,7 +147,7 @@ namespace CardHome
                     g.Rotate = true;
                     g.Card = CardIndex(RoomType.Bedroom);
                 },
-                Done = () => game.Selected >= 0 && game.SelectedDoors == Doors.W,
+                Done = () => game.Selected >= 0 && (game.SelectedDoors & Doors.W) != 0,
             });
             steps.Add(new Step
             {

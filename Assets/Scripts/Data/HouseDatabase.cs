@@ -119,8 +119,8 @@ namespace CardHome
                 (RoomType.Bedroom, 2), (RoomType.Bath, 1), (RoomType.Library, 2), (RoomType.Fireplace, 1),
                 (RoomType.Trap, 3), (RoomType.Treasury, 2),
             });
-            castle.Rooms.Add((new Vector2Int(1, 0), RoomType.Trap, Doors.E | Doors.W));
-            castle.Rooms.Add((new Vector2Int(0, 0), RoomType.Treasury, Doors.E));
+            castle.Rooms.Add((new Vector2Int(1, 0), RoomType.Trap, Doors.N | Doors.E | Doors.W));
+            castle.Rooms.Add((new Vector2Int(0, 0), RoomType.Treasury, Doors.N | Doors.E | Doors.W));
             castle.Guests.AddRange(new[] { (Tr, 3), (Sc, 2), (Gh, 1), (Th, 4), (Wo, 1) });
 
             var haunted = H("Haunted", "Особняк", "Детская и подвал на месте. Призраки приходят почти каждую ночь.", "7a5c8f", RoomType.Nursery);
@@ -131,8 +131,8 @@ namespace CardHome
                 (RoomType.Bedroom, 2), (RoomType.Bath, 1), (RoomType.Library, 3), (RoomType.Fireplace, 1),
                 (RoomType.Cellar, 2), (RoomType.Trap, 2), (RoomType.Treasury, 1), (RoomType.Nursery, 2),
             });
-            haunted.Rooms.Add((new Vector2Int(1, 0), RoomType.Nursery, Doors.N | Doors.E));
-            haunted.Rooms.Add((new Vector2Int(1, 1), RoomType.Cellar, Doors.S));
+            haunted.Rooms.Add((new Vector2Int(1, 0), RoomType.Nursery, Doors.N | Doors.E | Doors.W));
+            haunted.Rooms.Add((new Vector2Int(1, 1), RoomType.Cellar, Doors.N | Doors.E | Doors.S));
             haunted.Guests.AddRange(new[] { (Tr, 2), (Sc, 3), (Gh, 5), (Th, 1), (Wo, 1) });
 
             var inn = H("Inn", "Постоялый двор", "Всегда людно: столовая у входа, заглядывают инспектор и влюблённые.", "b9934f", RoomType.Dining);
@@ -154,7 +154,7 @@ namespace CardHome
                 (RoomType.Bedroom, 3), (RoomType.Library, 4), (RoomType.Fireplace, 1), (RoomType.Cellar, 1),
                 (RoomType.Trap, 2), (RoomType.Treasury, 1),
             });
-            monastery.Rooms.Add((new Vector2Int(2, 1), RoomType.Library, Doors.N | Doors.S));
+            monastery.Rooms.Add((new Vector2Int(2, 1), RoomType.Library, Doors.N | Doors.E | Doors.S));
             monastery.Guests.AddRange(new[] { (Sc, 6), (Tr, 2), (Gh, 2), (Th, 2), (Wo, 1) });
 
             var lodge = H("Lodge", "Охотничий домик", "Лес вокруг — волки каждую ночь. Зато камин уже горит.", "c4553f", RoomType.Fireplace);
@@ -175,7 +175,7 @@ namespace CardHome
                 (RoomType.Bedroom, 4), (RoomType.Bath, 3), (RoomType.Fireplace, 1), (RoomType.Trap, 2),
                 (RoomType.Treasury, 1), (RoomType.Lounge, 2),
             });
-            spa.Rooms.Add((new Vector2Int(3, 0), RoomType.Bath, Doors.W));
+            spa.Rooms.Add((new Vector2Int(3, 0), RoomType.Bath, Doors.N | Doors.E | Doors.W));
             spa.Guests.AddRange(new[] { (Co, 3), (Tr, 4), (Sc, 1), (Dr, 1), (Th, 2), (Wo, 1) });
 
             var palace = H("Palace", "Дворец", "Богатый дом и самые требовательные гости. В конце может явиться Хозяин.", "c9a93a", RoomType.Lounge);
@@ -187,8 +187,8 @@ namespace CardHome
                 (RoomType.Bedroom, 3), (RoomType.Bath, 2), (RoomType.Library, 1), (RoomType.Fireplace, 1),
                 (RoomType.Trap, 3), (RoomType.Treasury, 2), (RoomType.Lounge, 2),
             });
-            palace.Rooms.Add((new Vector2Int(1, 0), RoomType.Trap, Doors.E | Doors.W));
-            palace.Rooms.Add((new Vector2Int(0, 0), RoomType.Treasury, Doors.E));
+            palace.Rooms.Add((new Vector2Int(1, 0), RoomType.Trap, Doors.N | Doors.E | Doors.W));
+            palace.Rooms.Add((new Vector2Int(0, 0), RoomType.Treasury, Doors.N | Doors.E | Doors.W));
             palace.Rooms.Add((new Vector2Int(2, 1), RoomType.Lounge, Doors.E | Doors.S | Doors.W));
             palace.Guests.AddRange(new[] { (Tr, 3), (Sc, 2), (In, 2), (Co, 1), (Th, 3), (Wo, 2), (Gh, 1), (Gl, 1) });
 

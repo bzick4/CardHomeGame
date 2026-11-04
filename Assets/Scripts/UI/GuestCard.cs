@@ -94,7 +94,7 @@ namespace CardHome
             window.gameObject.AddComponent<RectMask2D>();
             var sky = UIKit.Image("Backdrop", window, Color.white, GuestArt.Backdrop);
             sky.raycastTarget = false;
-            UIKit.Stretch(sky.rectTransform);
+            UIKit.Cover(sky);
             var hero = UIKit.Image("Hero", window, Color.white, GuestArt.Character(g));
             hero.raycastTarget = false;
             hero.preserveAspect = true;

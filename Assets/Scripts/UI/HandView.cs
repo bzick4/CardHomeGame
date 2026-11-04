@@ -16,6 +16,7 @@ namespace CardHome
         public TileView Tile;
         public RoomDef Def;
         public int Level = 1;
+        public bool Painted; // карта из нарисованного бланка (Art/RoomCards) — её не красим цветом комнаты
     }
 
     // Рука карт веером, как в cityIdle: дуга с наклоном, раздача снизу по очереди,
@@ -275,7 +276,8 @@ namespace CardHome
         public void SetState(bool isSelected, Doors doors, bool canInteract)
         {
             Parts.Tile.SetRoom(Parts.Def, doors, false, Parts.Level);
-            Parts.Frame.color = canInteract ? Parts.Def.Color : Parts.Def.Color * new Color(0.75f, 0.75f, 0.75f, 1);
+            var baseColor = Parts.Painted ? Color.white : Parts.Def.Color;
+            Parts.Frame.color = canInteract ? baseColor : baseColor * new Color(0.75f, 0.75f, 0.75f, 1);
 
             if (!canInteract)
             {

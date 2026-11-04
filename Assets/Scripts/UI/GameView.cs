@@ -615,6 +615,9 @@ namespace CardHome
         // Без логики нажатий — её добавляют рука (HandCard) или экраны выбора (Button).
         CardParts BuildCardVisual(Transform parent, RoomDef def, Doors doors, int level = 1)
         {
+            var face = Icons.RoomCard(def.Type);
+            if (face != null) return BuildPaintedCard(parent, def, doors, level, face);
+
             var card = UIKit.Rect("Card", parent);
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
             card.pivot = new Vector2(0.5f, 0);
@@ -679,6 +682,78 @@ namespace CardHome
                 UIKit.Place(tag.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0.5f), new Vector2(0, 6), new Vector2(L.CardW, 30));
             }
             return new CardParts { Root = card, Frame = frame, Glow = glow, Tile = tile, Def = def, Level = level };
+        }
+
+        // Карта из нарисованного бланка (Art/RoomCards/<Тип>.png): рамка, окно с картинкой, лента и пергамент
+        // уже нарисованы; поверх игра пишет название и описание, а в углу окна — маленькая плитка со схемой дверей
+        // (она поворачивается вместе с картой). Бланк вписывается в размер карты без искажений.
+        CardParts BuildPaintedCard(Transform parent, RoomDef def, Doors doors, int level, Sprite face)
+        {
+            var card = UIKit.Rect("Card", parent);
+            card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
+            card.pivot = new Vector2(0.5f, 0);
+            card.sizeDelta = new Vector2(L.CardW, L.CardH);
+
+            // Область самого бланка — с его пропорциями, по центру карты.
+            var area = UIKit.Rect("Face", card);
+            UIKit.Stretch(area);
+            var fit = area.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fit.aspectRatio = face.rect.width / face.rect.height;
+
+            var glow = UIKit.Image("Glow", area, new Color(1, 0.85f, 0.2f, 0.95f), Sprites.Shadow);
+            glow.raycastTarget = false;
+            UIKit.Stretch(glow.rectTransform, -Sprites.ShadowPad - 10);
+            glow.enabled = false;
+
+            UIKit.DropShadow(area, new Vector2(4, -12), 0.5f);
+            var frame = UIKit.Image("Frame", area, Color.white, face);
+            UIKit.Stretch(frame.rectTransform);
+
+            // Отметки на бланке (в долях высоты снизу): лента ~44–52%, пергамент ~13–41%, окно ~55–92%.
+            var name = UIKit.Outlined(UIKit.Text(area, def.Name.ToUpper(), L.CardNameFont, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+            Band(name.rectTransform, 0.12f, 0.445f, 0.88f, 0.53f);
+            name.resizeTextForBestFit = true;
+            name.resizeTextMinSize = L.CardNameFont / 2;
+            name.resizeTextMaxSize = L.CardNameFont;
+
+            var desc = UIKit.Text(area, def.Description, L.CardDescFont, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+            Band(desc.rectTransform, 0.17f, 0.15f, 0.83f, 0.40f);
+            desc.resizeTextForBestFit = true;
+            desc.resizeTextMinSize = L.CardDescFont - 7;
+            desc.resizeTextMaxSize = L.CardDescFont;
+
+            // Схема дверей — маленькая плитка в правом верхнем углу окна.
+            float tileSize = L.MiniTile * 0.5f;
+            var tile = new TileView(area, tileSize, 0, false, showLabel: false);
+            tile.Root.anchorMin = tile.Root.anchorMax = new Vector2(0.84f, 0.89f);
+            tile.Root.pivot = new Vector2(1, 1);
+            tile.Root.anchoredPosition = Vector2.zero;
+            tile.SetRoom(def, doors, false, level);
+
+            // Улучшенная карта — в металлической рамке, как у рубашек.
+            if (level >= 2)
+            {
+                int tier = Card.FrameTier(level);
+                var metal = UIKit.Image("Metal", area, Color.white, CardBacks.FrameSprite(tier));
+                metal.raycastTarget = false;
+                UIKit.Stretch(metal.rectTransform);
+                var extra = new Vector2(L.CardW, L.CardH) * 0.07f;
+                metal.rectTransform.offsetMin = -extra;
+                metal.rectTransform.offsetMax = extra;
+                var tag = UIKit.Outlined(UIKit.Text(area, Card.LevelName(level).ToUpper(), L.CardDescFont - 2, TextAnchor.MiddleCenter,
+                    CardBacks.Tiers[tier].Gem, FontStyle.Bold), 2);
+                Band(tag.rectTransform, 0.1f, 0.0f, 0.9f, 0.1f);
+            }
+            return new CardParts { Root = card, Frame = frame, Glow = glow, Tile = tile, Def = def, Level = level, Painted = true };
+        }
+
+        // Растянуть элемент на прямоугольник бланка, заданный долями (лево, низ, право, верх).
+        static void Band(RectTransform rt, float x0, float y0, float x1, float y1)
+        {
+            rt.anchorMin = new Vector2(x0, y0);
+            rt.anchorMax = new Vector2(x1, y1);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
         }
 
         // ───────────── Перетаскивание карты на поле ─────────────

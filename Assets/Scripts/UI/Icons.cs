@@ -18,6 +18,24 @@ namespace CardHome
         public static Sprite House(HouseDef h) => Get("Houses/" + h.Id, () => PaintRoom(h.IconRoom));
         // Трещины для сломанной комнаты (полупрозрачные, поверх иконки).
         public static Sprite Crack => Get("Crack", PaintCrack);
+        // Нарисованный бланк карты комнаты: Assets/Resources/Art/RoomCards/<Тип>.png (без текста — его пишет игра).
+        // Нет картинки — null, и карта рисуется кодом, как раньше.
+        public static Sprite RoomCard(RoomType t)
+        {
+            string key = "RoomCards/" + t;
+            if (optional.TryGetValue(key, out var s)) return s;
+            s = Resources.Load<Sprite>("Art/" + key);
+            if (s == null)
+            {
+                var tex = Resources.Load<Texture2D>("Art/" + key);
+                if (tex != null) s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100);
+            }
+            optional[key] = s;
+            return s;
+        }
+
+        static readonly Dictionary<string, Sprite> optional = new Dictionary<string, Sprite>();
+
         public static Sprite Coin => Get("Coin", () => new Painter().Circle(0, 0, 0.8f, Gold).Circle(0, 0, 0.5f, H("ffe27a"), false).Box(0, 0, 0.12f, 0.36f, 0.05f, H("e0a91f"), false));
 
         static Painter PaintCrack()
