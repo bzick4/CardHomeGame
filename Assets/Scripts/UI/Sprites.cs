@@ -6,7 +6,7 @@ namespace CardHome
     // Все белые/серые — цвет задаётся через Image.color, обводка при этом остаётся тёмной.
     public static class Sprites
     {
-        static Sprite panel, flat, soft, shadow, circle, shadowCircle, pill, dayBg, nightBg, light, frame, vignette;
+        static Sprite panel, flat, soft, shadow, circle, shadowCircle, pill, nightBg, light, frame, vignette;
 
         // Объёмная плашка: светлый верх, тёмная «губа» снизу, обводка.
         public static Sprite Panel => panel != null ? panel : panel = RoundRect(64, 18, 5, bevel: true);
@@ -21,7 +21,6 @@ namespace CardHome
         // Маленькая плашка для дверей.
         public static Sprite Pill => pill != null ? pill : pill = RoundRect(32, 7, 3, bevel: false);
 
-        public static Sprite DayBackground => dayBg != null ? dayBg : dayBg = Gradient(RoomDatabase.Hex("7cc8f2"), RoomDatabase.Hex("3b78c4"));
         public static Sprite NightBackground => nightBg != null ? nightBg : nightBg = Gradient(RoomDatabase.Hex("1b1f45"), RoomDatabase.Hex("0d0d1f"));
 
         // Мягкое круглое пятно света: яркий центр, плавно гаснет к краю.

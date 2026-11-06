@@ -11,51 +11,11 @@ namespace CardHome
         static readonly Color MenuWood = RoomDatabase.Hex("9a6438");
         static readonly Color Rope = RoomDatabase.Hex("3b2a1e");
 
-        // Фон: ночное небо как в партии — градиент, луна, мерцающие звёзды. dim — притемнение под интерфейс.
-        void NightBackdrop(RectTransform parent, float dim)
-        {
-            var sky = UIKit.Image("Sky", parent, Color.white, Sprites.NightBackground);
-            sky.raycastTarget = false;
-            UIKit.Stretch(sky.rectTransform);
-
-            float k = OverlayScale;
-            var moonGlow = UIKit.Image("MoonGlow", parent, new Color(1, 0.95f, 0.75f, 0.25f), Sprites.Light);
-            moonGlow.raycastTarget = false;
-            UIKit.Place(moonGlow.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-170, -170) * k, Vector2.one * 380 * k);
-            var moon = UIKit.Image("Moon", parent, RoomDatabase.Hex("fff3c4"), Sprites.Circle);
-            moon.raycastTarget = false;
-            UIKit.Place(moon.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-170, -170) * k, Vector2.one * 120 * k);
-
-            var rnd = new System.Random(42);
-            for (int i = 0; i < 46; i++)
-            {
-                float s = (4 + (float)rnd.NextDouble() * 6) * 3 * k;
-                var star = UIKit.Image("Star", parent, new Color(1, 1, 0.9f, 0.9f), Sprites.Light);
-                star.raycastTarget = false;
-                UIKit.Place(star.rectTransform, new Vector2((float)rnd.NextDouble(), (float)rnd.NextDouble()),
-                    new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(s, s));
-                star.DOFade(0.2f, 0.8f + (float)rnd.NextDouble() * 1.6f).SetDelay((float)rnd.NextDouble() * 2)
-                    .SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(star.gameObject);
-            }
-
-            if (dim > 0)
-            {
-                var shade = UIKit.Image("Dim", parent, new Color(0.02f, 0.02f, 0.08f, dim));
-                shade.raycastTarget = false;
-                UIKit.Stretch(shade.rectTransform);
-            }
-        }
-
-        // Фон экранов вне партии — иллюстрация (дом ночью, Путник на тропинке).
-        // Всегда покрывает экран целиком, медленно «дышит». Если картинки нет — ночное небо из партии.
+        // Фон экранов вне партии — иллюстрация Menu/Background(Wide) (дом ночью, Путник на тропинке).
+        // Всегда покрывает экран целиком, медленно «дышит». dim — притемнение под интерфейс.
         void ArtBackdrop(RectTransform parent, float dim)
         {
-            var art = MenuArt.BackgroundFor(L.Portrait);
-            if (art == null)
-            {
-                NightBackdrop(parent, dim);
-                return;
-            }
+            var art = MenuArt.BackgroundFor(L.Portrait) ?? ArtStore.Require("Menu/Background");
             var under = UIKit.Image("Under", parent, RoomDatabase.Hex("141b33"));
             under.raycastTarget = false;
             UIKit.Stretch(under.rectTransform);

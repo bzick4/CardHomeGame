@@ -61,6 +61,31 @@ namespace CardHome
             return entry.Sprite;
         }
 
+        // Обязательная картинка: если файла нет — одно предупреждение в консоль и серая заглушка (ничего не рисуем кодом).
+        public static Sprite Require(string path)
+        {
+            var s = Get(path, null);
+            if (s != null) return s;
+            if (warned.Add(path)) Debug.LogWarning($"CardHome: нет картинки Assets/Resources/Art/{path}.png — показана заглушка.");
+            return Placeholder;
+        }
+
+        static readonly HashSet<string> warned = new HashSet<string>();
+        static Sprite placeholder;
+
+        static Sprite Placeholder
+        {
+            get
+            {
+                if (placeholder != null) return placeholder;
+                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                var grey = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+                tex.SetPixels(new[] { grey, grey, grey, grey });
+                tex.Apply(false, true);
+                return placeholder = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 100);
+            }
+        }
+
         // К какому набору относится картинка — по папке.
         static ArtScope ScopeOf(string path)
         {
@@ -172,12 +197,11 @@ namespace CardHome
             {
                 int c = code;
                 steps.Add(() => CardBacks.ThemeSprite(CardBacks.ThemeOf(c)));
-                steps.Add(() => CardBacks.FrameSprite(CardBacks.TierOf(c)));
+                steps.Add(() => CardBacks.FrameArt(CardBacks.TierOf(c)));
             }
             for (int tier = 0; tier <= 3; tier++)
             {
                 int t = tier;
-                steps.Add(() => CardBacks.FrameSprite(t));
                 steps.Add(() => CardBacks.FrameArt(t));
             }
             return steps;

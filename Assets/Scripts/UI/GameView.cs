@@ -98,7 +98,6 @@ namespace CardHome
         static readonly Color RestartColor = RoomDatabase.Hex("4cbb5a");
         static readonly Color Good = RoomDatabase.Hex("8be36f");
         static readonly Color Bad = RoomDatabase.Hex("ff6b5e");
-        static readonly Color PanelDim = new Color(0.08f, 0.05f, 0.12f, 0.55f);
         static readonly Color PlateTint = new Color(1, 1, 1, 0.85f); // тёмная плашка Panels/Plate под текстом поверх арта
 
         const float PortraitTop = 350;     // сверху: статус, подсказка, рука соперника
@@ -268,8 +267,9 @@ namespace CardHome
             }
             else
             {
-                var day = UIKit.Image("DaySky", transform, Color.white, Sprites.DayBackground);
-                UIKit.Stretch(day.rectTransform);
+                // В меню фона дома нет — под интерфейсом просто тёмный цвет (экраны меню закрывают его своими фонами).
+                var under = UIKit.Image("Under", transform, RoomDatabase.Hex("141b33"));
+                UIKit.Stretch(under.rectTransform);
             }
             BuildNightSky(location != null, locationMat != null);
 
@@ -839,73 +839,7 @@ namespace CardHome
         // крупное название и схема дверей; описание — в крупном просмотре карты.
         CardParts BuildCardVisual(Transform parent, RoomDef def, Doors doors, int level = 1, bool compact = false)
         {
-            var roomArt = Icons.RoomArt(def.Type);
-            if (roomArt != null) return BuildRoomCard(parent, def, doors, level, roomArt, compact);
-
-            var card = UIKit.Rect("Card", parent);
-            card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
-            card.pivot = new Vector2(0.5f, 0);
-            card.sizeDelta = new Vector2(L.CardW, L.CardH);
-
-            var glow = UIKit.Image("Glow", card, new Color(1, 0.85f, 0.2f, 0.95f), Sprites.Shadow);
-            glow.raycastTarget = false;
-            UIKit.Stretch(glow.rectTransform, -Sprites.ShadowPad - 14);
-            glow.enabled = false;
-
-            UIKit.DropShadow(card, new Vector2(4, -12), 0.55f);
-
-            var frame = UIKit.Image("Frame", card, def.Color, Sprites.Panel);
-            UIKit.Stretch(frame.rectTransform);
-
-            // Окно «арта»: комната с иконкой и дверями.
-            float inset = L.CardW * 0.06f;
-            float artH = L.MiniTile + 22;
-            var art = UIKit.Image("Art", card, RoomDatabase.Hex("2a1f1a"), Sprites.Flat);
-            art.raycastTarget = false;
-            UIKit.TopBand(art.rectTransform, inset, artH, inset);
-            var tile = new TileView(art.rectTransform, L.MiniTile, 0, false, showLabel: false);
-            UIKit.Place(tile.Root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 2), new Vector2(L.MiniTile, L.MiniTile));
-            tile.SetRoom(def, doors, false, level);
-
-            // Лента с названием поверх нижнего края окна.
-            float ribbonTop = inset + artH - L.CardNameFont * 0.6f;
-            float ribbonH = L.CardNameFont + 18;
-            var ribbon = UIKit.Image("Ribbon", card, DarkWood, Sprites.Panel);
-            ribbon.raycastTarget = false;
-            UIKit.TopBand(ribbon.rectTransform, ribbonTop, ribbonH, inset * 0.4f);
-            var name = UIKit.Outlined(UIKit.Text(ribbon.transform, def.Name.ToUpper(), L.CardNameFont, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
-            UIKit.Stretch(name.rectTransform, 2);
-            name.rectTransform.anchoredPosition = new Vector2(0, 2);
-            name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = Fs(L.CardNameFont / 2);
-            name.resizeTextMaxSize = L.CardNameFont;
-
-            // Плашка описания.
-            float descTop = ribbonTop + ribbonH + 4;
-            var descBg = UIKit.Image("DescBg", card, Cream, Sprites.Flat);
-            descBg.raycastTarget = false;
-            UIKit.TopBand(descBg.rectTransform, descTop, L.CardH - descTop - inset, inset);
-            var desc = UIKit.Text(descBg.transform, def.Description, L.CardDescFont, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
-            UIKit.Stretch(desc.rectTransform, 8);
-            desc.resizeTextForBestFit = true;
-            desc.resizeTextMinSize = Fs(L.CardDescFont - 6);
-            desc.resizeTextMaxSize = L.CardDescFont;
-
-            // Улучшенная карта — в металлической рамке, как у рубашек: бронза, серебро, золото.
-            if (level >= 2)
-            {
-                int tier = Card.FrameTier(level);
-                var metal = UIKit.Image("Metal", card, Color.white, CardBacks.FrameSprite(tier));
-                metal.raycastTarget = false;
-                UIKit.Stretch(metal.rectTransform);
-                var extra = new Vector2(L.CardW, L.CardH) * 0.07f;
-                metal.rectTransform.offsetMin = -extra;
-                metal.rectTransform.offsetMax = extra;
-                var tag = UIKit.Outlined(UIKit.Text(card, Card.LevelName(level).ToUpper(), Fs(L.CardDescFont - 2), TextAnchor.MiddleCenter,
-                    CardBacks.Tiers[tier].Gem, FontStyle.Bold), 2);
-                UIKit.Place(tag.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0.5f), new Vector2(0, 6), new Vector2(L.CardW, 30));
-            }
-            return new CardParts { Root = card, Frame = frame, Glow = glow, Tile = tile, Def = def, Level = level };
+            return BuildRoomCard(parent, def, doors, level, Icons.RoomArt(def.Type), compact);
         }
 
         // Карта комнаты из слоёв, в координатах лица 300×420 (от левого верхнего угла):
