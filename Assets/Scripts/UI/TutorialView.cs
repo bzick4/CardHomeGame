@@ -94,6 +94,9 @@ namespace CardHome
             return -1;
         }
 
+        // Размер шрифта не меньше читаемого на этом экране.
+        int Fs(int size) => Mathf.Max(L.MinFont, size);
+
         void BuildSteps()
         {
             var kitchenCell = new Vector2Int(1, 0);
@@ -107,7 +110,7 @@ namespace CardHome
             });
             steps.Add(new Step
             {
-                Text = "Здесь видно дом, ночь, <color=#c9933a>золото ●</color> и <color=#d0473c>репутацию ♥</color>.\n" +
+                Text = "Здесь видно дом, ночь, <color=#c9933a>золото</color> и <color=#d0473c>репутацию</color>.\n" +
                        "Если репутация упадёт до нуля — дом закроется.",
                 Target = () => view.StatsRect,
                 Button = "ДАЛЕЕ",
@@ -305,16 +308,16 @@ namespace CardHome
             text.rectTransform.offsetMin = new Vector2(28, 20);
             text.rectTransform.offsetMax = new Vector2(-28, -20);
             text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = L.BodyFont - 4;
+            text.resizeTextMinSize = Fs(L.BodyFont - 4);
             text.resizeTextMaxSize = L.BodyFont + 6;
 
-            nextButton = UIKit.Button(bubble, "ДАЛЕЕ", RoomDatabase.Hex("4cbb5a"), OnNext, L.ButtonFont - 6);
+            nextButton = UIKit.Button(bubble, "ДАЛЕЕ", RoomDatabase.Hex("4cbb5a"), OnNext, Fs(L.ButtonFont - 6));
             UIKit.Place((RectTransform)nextButton.transform, new Vector2(1, 0), new Vector2(1, 0.5f), new Vector2(-30, 0), new Vector2(320, 90));
 
             // Пропустить обучение можно в любой момент — кнопка всегда поверх затемнения.
             skipRoot = UIKit.Rect("Skip", (RectTransform)transform.parent);
             UIKit.Stretch(skipRoot);
-            var skip = UIKit.Button(skipRoot, "ПРОПУСТИТЬ ▶▶", RoomDatabase.Hex("8a7f72"), () => game?.SkipTutorial(), L.ButtonFont - 10);
+            var skip = UIKit.Button(skipRoot, "ПРОПУСТИТЬ ▶▶", RoomDatabase.Hex("8a7f72"), () => game?.SkipTutorial(), Fs(L.ButtonFont - 10));
             var srt = (RectTransform)skip.transform;
             UIKit.Place(srt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -24), new Vector2(330, 80));
 

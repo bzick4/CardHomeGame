@@ -67,7 +67,7 @@ namespace CardHome
         {
             var g = (GuestDef)MemberwiseClone();
             g.Regular = true;
-            g.name = "★ " + Name;
+            g.name = "Свой · " + Name;
             g.RegularBonus = 3;
             g.unhappyPenalty = 2;
             return g;

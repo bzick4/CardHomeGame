@@ -51,7 +51,7 @@ namespace CardHome
 
         public static Text Text(Transform parent, string text, int size, TextAnchor anchor, Color color, FontStyle style = FontStyle.Normal)
         {
-            var t = Rect("Text", parent).gameObject.AddComponent<Text>();
+            var t = Rect("Text", parent).gameObject.AddComponent<SafeText>();
             t.font = Font;
             t.text = text;
             t.fontSize = size;
@@ -66,8 +66,9 @@ namespace CardHome
         }
 
         // Белый текст с толстой тёмной обводкой — как в мультяшных ККИ.
-        public static Text Outlined(Text t, float thickness = 2.5f)
+        public static Text Outlined(Text t, float thickness = 3f)
         {
+            thickness = Mathf.Max(3f, thickness); // тоньше 3 на телефоне обводка теряется
             var o = t.gameObject.AddComponent<Outline>();
             o.effectColor = Ink;
             o.effectDistance = new Vector2(thickness, -thickness);

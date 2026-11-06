@@ -25,8 +25,12 @@ namespace CardHome
         public int LogFont { get; init; }
         public int ButtonFont { get; private set; }
         public int LogLines { get; init; }
+        public int MinFont { get; private set; }      // меньше этого текст на этом экране не читается
+        public float PanelShare { get; private set; } // горизонталь: доля ширины под правую панель (0 — 600 единиц)
+        public float PanelScale { get; private set; } = 1; // горизонталь: во сколько раз крупнее строки и кнопки панели
 
-        // Основной режим: телефон вертикально. Ширина фиксирована, лишняя высота уходит в середину.
+        // Основной режим: телефон вертикально. Ширина 1080 = ~390 pt на iPhone, поэтому текст не меньше 32
+        // (иначе меньше 11 pt). Ширина фиксирована, лишняя высота уходит в середину.
         public static readonly Layout PortraitLayout = new Layout
         {
             Portrait = true,
@@ -34,11 +38,12 @@ namespace CardHome
             MatchWidthOrHeight = 0f,
             Cell = 164, Step = 176,
             CardW = 230, CardH = 300, CardGap = 12, MiniTile = 96,
-            TileFont = 22, CardNameFont = 24, CardDescFont = 18,
-            StatsFont = 34, BodyFont = 24, LogFont = 21, ButtonFont = 34, LogLines = 2,
+            TileFont = 30, CardNameFont = 34, CardDescFont = 30,
+            StatsFont = 44, BodyFont = 34, LogFont = 32, ButtonFont = 40, LogLines = 1,
+            MinFont = 31, // 31 единица = 11 pt на iPhone (ширина 390 pt)
         };
 
-        // Запасной режим: горизонтальный экран (планшет, ПК).
+        // Горизонтальный экран планшета или ПК.
         public static readonly Layout LandscapeLayout = new Layout
         {
             Portrait = false,
@@ -48,7 +53,32 @@ namespace CardHome
             CardW = 170, CardH = 236, CardGap = 16, MiniTile = 76,
             TileFont = 16, CardNameFont = 19, CardDescFont = 14,
             StatsFont = 26, BodyFont = 19, LogFont = 17, ButtonFont = 24, LogLines = 10,
+            MinFont = 13,
         };
+
+        // Телефон горизонтально: высота экрана ~390 pt = 1080 единиц, поэтому шрифты ×1.8,
+        // правая панель шире (34% ширины), карты в руке крупнее.
+        public static readonly Layout LandscapePhoneLayout = new Layout
+        {
+            Portrait = false,
+            ReferenceResolution = new Vector2(1920, 1080),
+            MatchWidthOrHeight = 1f,
+            Cell = 116, Step = 124,
+            CardW = 220, CardH = 300, CardGap = 16, MiniTile = 76,
+            TileFont = 29, CardNameFont = 34, CardDescFont = 26,
+            StatsFont = 47, BodyFont = 34, LogFont = 31, ButtonFont = 43, LogLines = 3,
+            MinFont = 31, PanelShare = 0.34f, PanelScale = 1.45f, // 31 единица = 11 pt при высоте 390 pt
+        };
+
+        // Какой макет подходит экрану. Телефон в горизонтали узнаём по короткой стороне (если браузер сообщает dpi)
+        // или по вытянутости экрана: у телефонов ~2:1 и больше, у планшетов и мониторов — до 16:9.
+        public static Layout For(int width, int height, float dpi)
+        {
+            if (height >= width) return PortraitLayout;
+            float aspect = width / (float)Mathf.Max(1, height);
+            bool shortSide = dpi > 0 && height / (dpi / 160f) < 600;
+            return shortSide || aspect >= 1.9f ? LandscapePhoneLayout : LandscapeLayout;
+        }
     }
 
     // Весь интерфейс. Без Update и корутин: реагирует на события GameController,
@@ -69,6 +99,7 @@ namespace CardHome
         static readonly Color Good = RoomDatabase.Hex("8be36f");
         static readonly Color Bad = RoomDatabase.Hex("ff6b5e");
         static readonly Color PanelDim = new Color(0.08f, 0.05f, 0.12f, 0.55f);
+        static readonly Color PlateTint = new Color(1, 1, 1, 0.85f); // тёмная плашка Panels/Plate под текстом поверх арта
 
         const float PortraitTop = 350;     // сверху: статус, подсказка, рука соперника
         const float PortraitBottom = 590;  // снизу: кнопки, рука, журнал
@@ -81,7 +112,7 @@ namespace CardHome
         bool pendingRebuild;
 
         readonly TileView[,] tiles = new TileView[HouseGrid.Width, HouseGrid.Height];
-        RectTransform root, gridRoot, handRoot, statsBar, pileRoot;
+        RectTransform root, gridRoot, handRoot, statsBar, phaseBar, pileRoot;
         HandView handView;
         Text statsText, phaseText, logText, pileCount;
         Button rotateButton, nightButton, menuButton;
@@ -197,7 +228,7 @@ namespace CardHome
 
             builtScreen = new Vector2Int(Screen.width, Screen.height);
             builtSafeArea = Screen.safeArea;
-            L = Screen.height >= Screen.width ? Layout.PortraitLayout : Layout.LandscapeLayout;
+            L = Layout.For(Screen.width, Screen.height, Screen.dpi);
             scaler.referenceResolution = L.ReferenceResolution;
             scaler.matchWidthOrHeight = L.MatchWidthOrHeight;
 
@@ -208,6 +239,12 @@ namespace CardHome
                 var loc = UIKit.Image("Location", transform, Color.white, location);
                 loc.raycastTarget = false;
                 UIKit.Cover(loc);
+                var dim = UIKit.Image("Dim", transform, new Color(0, 0, 0, 0.3f));
+                dim.raycastTarget = false;
+                UIKit.Stretch(dim.rectTransform);
+                var vignette = UIKit.Image("Vignette", transform, new Color(0, 0, 0, 0.55f), Sprites.Vignette);
+                vignette.raycastTarget = false;
+                UIKit.Stretch(vignette.rectTransform);
             }
             else
             {
@@ -275,9 +312,14 @@ namespace CardHome
             for (int y = 0; y < HouseGrid.Height; y++)
             {
                 var p = new Vector2Int(x, y);
-                var tile = new TileView(gridRoot, L.Cell, L.TileFont, true);
+                // Подписи на клетках не читаются на телефоне — название появляется по нажатию.
+                var tile = new TileView(gridRoot, L.Cell, L.TileFont, true, showLabel: false);
                 tile.Root.anchoredPosition = CellPos(p);
-                tile.Button.onClick.AddListener(() => game?.ClickCell(p));
+                tile.Button.onClick.AddListener(() =>
+                {
+                    ShowRoomToast(p);
+                    game?.ClickCell(p);
+                });
                 tiles[x, y] = tile;
             }
 
@@ -290,7 +332,7 @@ namespace CardHome
             handRoot = UIKit.Rect("Hand", root);
             handRoot.sizeDelta = new Vector2(L.Portrait ? 820 : 900, L.CardH + 30);
             handView = new HandView(handRoot, L.CardW, L.CardH, handRoot.sizeDelta.x,
-                (card, doors) => BuildCardVisual(handRoot, card.Def, doors, card.Level));
+                (card, doors) => BuildCardVisual(handRoot, card.Def, doors, card.Level, compact: true));
             handView.CardTapped += i => game?.SelectCard(i);
             handView.DragBegan = OnCardDragBegan;
             handView.Dragging = OnCardDragging;
@@ -309,17 +351,59 @@ namespace CardHome
 
             statsText = UIKit.Outlined(UIKit.Text(root, "", L.StatsFont, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
             statsText.resizeTextForBestFit = true;
-            statsText.resizeTextMinSize = L.StatsFont / 2;
+            statsText.resizeTextMinSize = Fs(L.StatsFont / 2);
             statsText.resizeTextMaxSize = L.StatsFont;
-            phaseText = UIKit.Outlined(UIKit.Text(root, "", L.BodyFont - 2, TextAnchor.MiddleCenter, Color.white), 2);
+            phaseText = UIKit.Outlined(UIKit.Text(root, "", Fs(L.BodyFont - 2), TextAnchor.MiddleCenter, Color.white), 2);
             phaseText.resizeTextForBestFit = true;
-            phaseText.resizeTextMinSize = L.BodyFont - 8;
-            phaseText.resizeTextMaxSize = L.BodyFont - 2;
+            phaseText.resizeTextMinSize = Fs(L.BodyFont - 8);
+            phaseText.resizeTextMaxSize = Fs(L.BodyFont - 2);
             logText = UIKit.Text(root, "", L.LogFont, TextAnchor.LowerLeft, Cream);
+            logText.resizeTextForBestFit = true;
+            logText.resizeTextMinSize = Fs(L.LogFont - 6);
+            logText.resizeTextMaxSize = L.LogFont;
 
-            rotateButton = UIKit.Button(root, "ПОВЕРНУТЬ ⟳", RotateColor, () => game?.Rotate(), L.ButtonFont);
-            nightButton = UIKit.Button(root, "НОЧЬ ☾", NightColor, OnNightButton, L.ButtonFont);
-            menuButton = UIKit.Button(root, "≡", DarkWood, () => game?.ShowMenu(), L.ButtonFont + 6);
+            rotateButton = UIKit.Button(root, "ПОВЕРНУТЬ", RotateColor, () => game?.Rotate(), L.ButtonFont);
+            nightButton = UIKit.Button(root, "НОЧЬ", NightColor, OnNightButton, L.ButtonFont);
+            menuButton = RoundButton(root, UiArt.Icon("Menu"), Vector2.zero, () => game?.ShowMenu(), 96);
+        }
+
+        // Название комнаты над клеткой: всплывает, держится секунду и тает.
+        RectTransform roomToast;
+        Text roomToastText;
+
+        void ShowRoomToast(Vector2Int p)
+        {
+            var room = game?.Grid.Get(p);
+            if (room == null) return;
+            if (roomToast == null)
+            {
+                var img = UIKit.Image("RoomToast", gridRoot, PlateTint, UiArt.Plate);
+                img.raycastTarget = false;
+                roomToast = img.rectTransform;
+                roomToast.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+                roomToastText = UIKit.Outlined(UIKit.Text(roomToast, "", L.BodyFont, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
+                UIKit.Stretch(roomToastText.rectTransform, 10);
+                roomToastText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            }
+            var def = RoomDatabase.Get(room.Type);
+            string title = room.Broken ? $"{def.Name} — сломана" : room.Level > 1 ? $"{def.Name} {HouseDatabase.Roman(room.Level)}" : def.Name;
+            roomToastText.text = title;
+            float w = Mathf.Max(L.Cell * 1.2f, roomToastText.preferredWidth + 60);
+            roomToast.sizeDelta = new Vector2(w, L.BodyFont + 34);
+            roomToast.anchoredPosition = CellPos(p) + new Vector2(0, L.Cell * 0.62f);
+            roomToast.SetAsLastSibling();
+
+            var group = roomToast.GetComponent<CanvasGroup>();
+            roomToast.DOKill();
+            group.DOKill();
+            group.alpha = 0;
+            DOTween.Sequence()
+                .Append(group.DOFade(1, 0.12f))
+                .Join(roomToast.DOScale(1, 0.18f).From(0.8f).SetEase(Ease.OutBack))
+                .AppendInterval(1.1f)
+                .Append(group.DOFade(0, 0.3f))
+                .SetLink(roomToast.gameObject)
+                .SetTarget(roomToast);
         }
 
         void OnNightButton()
@@ -387,13 +471,14 @@ namespace CardHome
         void ArrangePortrait()
         {
             const float pad = 32;
-            statsBar = Backing(statsText, DarkWood, Sprites.Panel, 6);
-            UIKit.TopBand(statsBar, 16, 76, pad);
-            statsBar.offsetMin += new Vector2(96, 0);
+            statsBar = Backing(statsText, PlateTint, UiArt.Plate, 12);
+            UIKit.TopBand(statsBar, 16, 84, pad);
+            statsBar.offsetMin += new Vector2(104, 0);
             statsText.rectTransform.anchoredPosition = new Vector2(0, 3);
-            UIKit.Place((RectTransform)menuButton.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(pad, -16), new Vector2(84, 76));
-            UIKit.TopBand(phaseText.rectTransform, 96, 56, pad);
-            UIKit.TopBand(oppRoot, 156, 180, pad);
+            UIKit.Place((RectTransform)menuButton.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(pad - 8, -8), new Vector2(100, 100));
+            phaseBar = Backing(phaseText, PlateTint, UiArt.Plate, 10);
+            UIKit.TopBand(phaseBar, 108, 60, pad + 40);
+            UIKit.TopBand(oppRoot, 176, 166, pad);
 
             // Кнопки в самом низу, над ними карты и колода, над ними журнал.
             float buttonH = 116, buttonW = (1080 - pad * 3) / 2;
@@ -406,12 +491,13 @@ namespace CardHome
             UIKit.Place(pileRoot, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-pad, handBottom), pileRoot.sizeDelta);
 
             float logBottom = handBottom + L.CardH + 24;
-            var log = Backing(logText, PanelDim, Sprites.Soft, 10);
+            var log = Backing(logText, PlateTint, UiArt.Plate, 12);
+            logText.alignment = TextAnchor.MiddleLeft;
             log.anchorMin = new Vector2(0, 0);
             log.anchorMax = new Vector2(1, 0);
             log.pivot = new Vector2(0.5f, 0);
             log.offsetMin = new Vector2(pad, logBottom);
-            log.offsetMax = new Vector2(-pad, logBottom + 70);
+            log.offsetMax = new Vector2(-pad, logBottom + 66);
 
             // Дом с входом — посередине свободного места; если места мало, чуть уменьшается.
             float safeH = Screen.height * 1080f / Mathf.Max(1, Screen.width) * Screen.safeArea.height / Mathf.Max(1, Screen.height);
@@ -427,7 +513,11 @@ namespace CardHome
         // справа деревянная панель — статус, соперник, журнал и кнопки.
         void ArrangeLandscape()
         {
-            const float panelW = 600, margin = 20;
+            // На телефоне панель шире (доля ширины холста), а строки и кнопки в ней крупнее в s раз.
+            const float margin = 20;
+            float canvasW = 1080f * Screen.width / Mathf.Max(1, Screen.height);
+            float panelW = L.PanelShare > 0 ? Mathf.Max(600, canvasW * L.PanelShare) : 600;
+            float s = L.PanelScale;
             var panelRoot = UIKit.Rect("Panel", root);
             panelRoot.SetAsFirstSibling();
             panelRoot.anchorMin = new Vector2(1, 0);
@@ -441,23 +531,28 @@ namespace CardHome
 
             foreach (var t in new[] { statsText, phaseText, logText }) t.transform.SetParent(panel, false);
             oppRoot.SetParent(panel, false);
-            UIKit.TopBand(statsText.rectTransform, 18, 56, 18);
+            UIKit.TopBand(statsText.rectTransform, 18, 56 * s, 18);
             statsBar = statsText.rectTransform;
-            UIKit.TopBand(phaseText.rectTransform, 80, 80, 18);
-            UIKit.TopBand(oppRoot, 168, 190, 14);
-            // Соперник в узкой панели: подпись слева, рубашки в середине, колода справа.
-            oppInfo.rectTransform.offsetMax = new Vector2(210, -8);
-            UIKit.Place(oppHandRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(30, 0), new Vector2(230, 160));
+            float y = 18 + 56 * s + 6;
+            UIKit.TopBand(phaseText.rectTransform, y, 80 * s, 18);
+            y += 80 * s + 8;
+            UIKit.TopBand(oppRoot, y, 190 * s, 14);
+            // Соперник в панели: подпись слева, рубашки в середине, колода справа.
+            oppInfo.rectTransform.offsetMax = new Vector2(210 * s, -8);
+            UIKit.Place(oppHandRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(30 * s, 0), new Vector2(230 * s, 160));
+            y += 190 * s + 12;
 
+            float buttonH = 100 * s;
             var log = Backing(logText, new Color(0, 0, 0, 0.3f), Sprites.Soft, 12);
             log.anchorMin = Vector2.zero;
             log.anchorMax = Vector2.one;
-            log.offsetMin = new Vector2(18, 144);
-            log.offsetMax = new Vector2(-18, -378);
+            log.offsetMin = new Vector2(18, 24 + buttonH + 20);
+            log.offsetMax = new Vector2(-18, -y);
 
             foreach (var b in new[] { rotateButton, nightButton }) b.transform.SetParent(panel, false);
-            PlaceBottom(rotateButton, new Vector2(0, 0), new Vector2(18, 24), new Vector2(272, 100));
-            PlaceBottom(nightButton, new Vector2(1, 0), new Vector2(-18, 24), new Vector2(272, 100));
+            float buttonW = (panelW - 18 * 3) / 2;
+            PlaceBottom(rotateButton, new Vector2(0, 0), new Vector2(18, 24), new Vector2(buttonW, buttonH));
+            PlaceBottom(nightButton, new Vector2(1, 0), new Vector2(-18, 24), new Vector2(buttonW, buttonH));
 
             // Всё остальное — в области слева от панели (она растягивается на широких телефонах).
             var main = UIKit.Rect("Main", root);
@@ -467,7 +562,7 @@ namespace CardHome
             main.offsetMin = Vector2.zero;
             main.offsetMax = new Vector2(-(panelW + margin), 0);
 
-            UIKit.Place((RectTransform)menuButton.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(84, 76));
+            UIKit.Place((RectTransform)menuButton.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(16, -16), new Vector2(100, 100));
 
             // Рука видна целиком: снизу запас под рамку, которая выступает за край карты (48/420 высоты).
             float handLift = L.CardH * 48f / 420f + 8;
@@ -501,6 +596,9 @@ namespace CardHome
         // ───────────── Цели для обучения ─────────────
 
         internal Layout CurrentLayout => L;
+
+        // Размер шрифта не меньше читаемого на этом экране.
+        int Fs(int size) => Mathf.Max(L.MinFont, size);
         internal RectTransform StatsRect => statsBar;
         internal RectTransform OpponentRect => oppRoot;
         internal RectTransform GridRect => gridRoot;
@@ -577,6 +675,7 @@ namespace CardHome
 
             UpdateStats();
             phaseText.text = PhaseHint();
+            if (phaseBar != null) phaseBar.gameObject.SetActive(!string.IsNullOrEmpty(phaseText.text));
 
             bool playing = state == Phase.Day || state == Phase.Night;
             rotateButton.gameObject.SetActive(playing);
@@ -584,7 +683,7 @@ namespace CardHome
             nightButton.gameObject.SetActive(playing);
             nightButton.interactable = state == Phase.Day || game.Responding;
             bool letIn = state == Phase.Night;
-            SetButton(nightButton, letIn ? "ВПУСТИТЬ ▶" : "НОЧЬ ☾", letIn ? LetInColor : NightColor);
+            SetButton(nightButton, letIn ? "ВПУСТИТЬ" : "НОЧЬ", letIn ? LetInColor : NightColor);
             menuButton.gameObject.SetActive(state == Phase.Day && !game.IsTutorial);
 
             RefreshOpponent();
@@ -605,15 +704,16 @@ namespace CardHome
             switch (game.State)
             {
                 case Phase.Day:
-                    if (game.ActionsLeft <= 0)
-                        return "Ходы на сегодня закончились — жми «Ночь»";
-                    if (game.MovingFrom.HasValue)
-                        return $"Перенос: коснись зелёной клетки или поверни и коснись комнаты ещё раз. Ходов: {game.ActionsLeft}";
-                    if (game.Selected >= 0 && game.Grid.AllPositions().Any(game.CanUpgradeAt))
-                        return $"Коснись такой же комнаты в зелёной рамке — улучшишь её до II. Ходов: {game.ActionsLeft}";
-                    if (game.Grid.BrokenCount() > 0)
-                        return $"Коснись сломанной комнаты, чтобы починить (1 ход). Ходов: {game.ActionsLeft}";
-                    return $"День: построй комнаты, пока гости не пришли. Ходов: {game.ActionsLeft} · в руке {game.Hand.Count}/{GameController.MaxHand}";
+                {
+                    string status = $"Ходов: {game.ActionsLeft} · Рука {game.Hand.Count}/{GameController.MaxHand}";
+                    bool explain = game.IsTutorial || (!game.IsWander && game.Level.Index < 2);
+                    if (game.ActionsLeft <= 0) return "Ходы закончились — жми «Ночь»";
+                    if (!explain) return status;
+                    if (game.MovingFrom.HasValue) return "Коснись зелёной клетки, чтобы перенести";
+                    if (game.Selected >= 0 && game.Grid.AllPositions().Any(game.CanUpgradeAt)) return "Такая же комната в зелёной рамке — улучшить";
+                    if (game.Grid.BrokenCount() > 0) return "Коснись сломанной комнаты — починить (1 ход)";
+                    return "День: строй комнаты до ночи · " + status;
+                }
                 case Phase.Night:
                     var g = game.CurrentGuest;
                     switch (game.Step)
@@ -637,8 +737,8 @@ namespace CardHome
         {
             if (game == null || statsText == null) return;
             int gold = goldHeld ? shownGold : game.Gold;
-            string coins = $"<color=#ffd34d>● {gold}</color>";
-            string hearts = $"<color=#ff6b6b>{new string('♥', Mathf.Max(0, game.Reputation))}</color>";
+            string coins = $"<color=#ffd34d>{gold} зол.</color>";
+            string hearts = $"<color=#ff6b6b>{Mathf.Max(0, game.Reputation)} реп.</color>";
             string title = game.IsTutorial ? "ОБУЧЕНИЕ · ДЕНЬ 0"
                 : $"{game.Level.Title.ToUpper()} · НОЧЬ {Mathf.Min(game.Night, game.MaxNights)}/{game.MaxNights}";
             statsText.text = $"{title}    {coins}    {hearts}";
@@ -670,10 +770,12 @@ namespace CardHome
 
         // Внешний вид карты: цветная рамка, окно с иконкой комнаты, лента с названием, светлая плашка описания.
         // Без логики нажатий — её добавляют рука (HandCard) или экраны выбора (Button).
-        CardParts BuildCardVisual(Transform parent, RoomDef def, Doors doors, int level = 1)
+        // compact — карта в руке: на телефоне она слишком мала для описания, поэтому только арт,
+        // крупное название и схема дверей; описание — в крупном просмотре карты.
+        CardParts BuildCardVisual(Transform parent, RoomDef def, Doors doors, int level = 1, bool compact = false)
         {
             var roomArt = Icons.RoomArt(def.Type);
-            if (roomArt != null) return BuildRoomCard(parent, def, doors, level, roomArt);
+            if (roomArt != null) return BuildRoomCard(parent, def, doors, level, roomArt, compact);
 
             var card = UIKit.Rect("Card", parent);
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
@@ -710,7 +812,7 @@ namespace CardHome
             UIKit.Stretch(name.rectTransform, 2);
             name.rectTransform.anchoredPosition = new Vector2(0, 2);
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = L.CardNameFont / 2;
+            name.resizeTextMinSize = Fs(L.CardNameFont / 2);
             name.resizeTextMaxSize = L.CardNameFont;
 
             // Плашка описания.
@@ -721,7 +823,7 @@ namespace CardHome
             var desc = UIKit.Text(descBg.transform, def.Description, L.CardDescFont, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
             UIKit.Stretch(desc.rectTransform, 8);
             desc.resizeTextForBestFit = true;
-            desc.resizeTextMinSize = L.CardDescFont - 6;
+            desc.resizeTextMinSize = Fs(L.CardDescFont - 6);
             desc.resizeTextMaxSize = L.CardDescFont;
 
             // Улучшенная карта — в металлической рамке, как у рубашек: бронза, серебро, золото.
@@ -734,7 +836,7 @@ namespace CardHome
                 var extra = new Vector2(L.CardW, L.CardH) * 0.07f;
                 metal.rectTransform.offsetMin = -extra;
                 metal.rectTransform.offsetMax = extra;
-                var tag = UIKit.Outlined(UIKit.Text(card, Card.LevelName(level).ToUpper(), L.CardDescFont - 2, TextAnchor.MiddleCenter,
+                var tag = UIKit.Outlined(UIKit.Text(card, Card.LevelName(level).ToUpper(), Fs(L.CardDescFont - 2), TextAnchor.MiddleCenter,
                     CardBacks.Tiers[tier].Gem, FontStyle.Bold), 2);
                 UIKit.Place(tag.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0.5f), new Vector2(0, 6), new Vector2(L.CardW, 30));
             }
@@ -744,7 +846,7 @@ namespace CardHome
         // Карта комнаты из слоёв, в координатах лица 300×420 (от левого верхнего угла):
         // арт комнаты сверху, пергамент снизу, красная лента с названием на стыке, схема дверей в углу арта,
         // поверх всего — рамка круга улучшения (Art/Frames), та же, что у рубашек.
-        CardParts BuildRoomCard(Transform parent, RoomDef def, Doors doors, int level, Sprite art)
+        CardParts BuildRoomCard(Transform parent, RoomDef def, Doors doors, int level, Sprite art, bool compact = false)
         {
             var card = UIKit.Rect("Card", parent);
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
@@ -784,26 +886,39 @@ namespace CardHome
 
             var ribbonEdge = UIKit.Image("RibbonEdge", area, RoomDatabase.Hex("d9a441"), Sprites.Flat);
             ribbonEdge.raycastTarget = false;
-            FacePx(ribbonEdge.rectTransform, 10, 234, 290, 276);
+            // В руке лента шире и выше: название должно читаться крупно (не меньше L.MinFont).
+            float rt0 = compact ? 220 : 237, rt1 = compact ? 292 : 273;
+            FacePx(ribbonEdge.rectTransform, compact ? 6 : 10, rt0 - 3, compact ? 294 : 290, rt1 + 3);
             var ribbon = UIKit.Image("Ribbon", area, RoomDatabase.Hex("7a2418"), Sprites.Flat);
             ribbon.raycastTarget = false;
-            FacePx(ribbon.rectTransform, 13, 237, 287, 273);
+            FacePx(ribbon.rectTransform, compact ? 9 : 13, rt0, compact ? 291 : 287, rt1);
             string title = level > 1 ? $"{def.Name} {HouseDatabase.Roman(level)}" : def.Name;
-            var name = UIKit.Outlined(UIKit.Text(area, title, Mathf.RoundToInt(22 * k), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
-            FacePx(name.rectTransform, 22, 236, 278, 274);
+            int nameMax = compact ? Mathf.Max(L.CardNameFont, Mathf.RoundToInt(40 * k)) : Mathf.RoundToInt(22 * k);
+            var name = UIKit.Outlined(UIKit.Text(area, title, nameMax, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+            FacePx(name.rectTransform, compact ? 14 : 22, rt0 - 1, compact ? 286 : 278, rt1 + 1);
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = Mathf.Max(8, Mathf.RoundToInt(12 * k));
-            name.resizeTextMaxSize = Mathf.RoundToInt(22 * k);
+            name.resizeTextMinSize = compact ? L.MinFont : Mathf.Max(8, Mathf.RoundToInt(12 * k));
+            name.resizeTextMaxSize = nameMax;
 
-            // Описание — в безопасной зоне пергамента: ~30 от боков и ~60 от низа (там камни богатых рамок).
-            var desc = UIKit.Text(area, def.Description, Mathf.RoundToInt(17 * k), TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
-            FacePx(desc.rectTransform, 30, 280, 270, 360);
-            desc.resizeTextForBestFit = true;
-            desc.resizeTextMinSize = Mathf.Max(7, Mathf.RoundToInt(10 * k));
-            desc.resizeTextMaxSize = Mathf.RoundToInt(17 * k);
+            DoorScheme scheme;
+            if (compact)
+            {
+                // Описания нет — на пергаменте крупная схема дверей.
+                scheme = new DoorScheme(area, 84 * k);
+                scheme.Root.anchorMin = scheme.Root.anchorMax = new Vector2(0.5f, 1 - 348 / FaceH);
+            }
+            else
+            {
+                // Описание — в безопасной зоне пергамента: ~30 от боков и ~60 от низа (там камни богатых рамок).
+                var desc = UIKit.Text(area, def.Description, Mathf.RoundToInt(17 * k), TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+                FacePx(desc.rectTransform, 30, 280, 270, 360);
+                desc.resizeTextForBestFit = true;
+                desc.resizeTextMinSize = Mathf.Max(7, Mathf.RoundToInt(10 * k));
+                desc.resizeTextMaxSize = Mathf.RoundToInt(17 * k);
 
-            var scheme = new DoorScheme(area, 48 * k);
-            scheme.Root.anchorMin = scheme.Root.anchorMax = new Vector2(214 / FaceW, 1 - 94 / FaceH);
+                scheme = new DoorScheme(area, 48 * k);
+                scheme.Root.anchorMin = scheme.Root.anchorMax = new Vector2(214 / FaceW, 1 - 94 / FaceH);
+            }
             scheme.Root.anchoredPosition = Vector2.zero;
             scheme.Set(doors);
 

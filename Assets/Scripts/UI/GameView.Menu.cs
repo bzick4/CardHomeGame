@@ -346,7 +346,7 @@ namespace CardHome
                 bool on = tier == levelsTier;
                 var color = on ? RoomDatabase.Hex("d0473c") : open ? RoomDatabase.Hex("8a5a32") : RoomDatabase.Hex("4a4038");
                 var tab = Place(UIKit.Button(levelsTabs, (open ? "" : "   ") + $"КРУГ {HouseDatabase.Roman(tier + 1)}",
-                    color, () => SwitchTier(tier), L.ButtonFont - 8), (i - 1) * 300, 0, 280, 76);
+                    color, () => SwitchTier(tier), Fs(L.ButtonFont - 8)), (i - 1) * 300, 0, 280, 76);
                 tab.interactable = open && !on;
                 if (!open)
                 {
@@ -418,11 +418,11 @@ namespace CardHome
             var plaque = UIKit.Image("Plaque", node, DarkWood, Sprites.Panel);
             plaque.raycastTarget = false;
             UIKit.Place(plaque.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 0), new Vector2(220, 52));
-            var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", L.BodyFont - 2, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
+            var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", Fs(L.BodyFont - 2), TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
             UIKit.Stretch(name.rectTransform, 6);
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = L.BodyFont - 10;
-            name.resizeTextMaxSize = L.BodyFont - 2;
+            name.resizeTextMinSize = Fs(L.BodyFont - 10);
+            name.resizeTextMaxSize = Fs(L.BodyFont - 2);
 
             if (stars > 0)
             {
@@ -448,11 +448,11 @@ namespace CardHome
                     var pill = UIKit.Image("Hint", node, new Color(0.15f, 0.12f, 0.12f, 0.85f), Sprites.Soft);
                     pill.raycastTarget = false;
                     UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -4), new Vector2(300, 46));
-                    var t = UIKit.Text(pill.transform, $"Пройди «{prev.Title}»", L.BodyFont - 4, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
+                    var t = UIKit.Text(pill.transform, $"Пройди «{prev.Title}»", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
                     UIKit.Stretch(t.rectTransform, 6);
                     t.resizeTextForBestFit = true;
                     t.resizeTextMinSize = 12;
-                    t.resizeTextMaxSize = L.BodyFont - 4;
+                    t.resizeTextMaxSize = Fs(L.BodyFont - 4);
                 }
                 return;
             }
@@ -474,7 +474,7 @@ namespace CardHome
                 var pill = UIKit.Image("Saved", node, RoomDatabase.Hex("2fb5c4"), Sprites.Panel);
                 pill.raycastTarget = false;
                 UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -4), new Vector2(240, 46));
-                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"▶ день {SaveSystem.LoadRun()?.Night}", L.BodyFont - 4, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"▶ день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
                 UIKit.Stretch(t.rectTransform, 4);
             }
 
@@ -565,11 +565,11 @@ namespace CardHome
             var plaque = UIKit.Image("Plaque", node, DarkWood, Sprites.Panel);
             plaque.raycastTarget = false;
             UIKit.Place(plaque.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -60), new Vector2(200, 42));
-            var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", L.BodyFont - 2, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
+            var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", Fs(L.BodyFont - 2), TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
             UIKit.Stretch(name.rectTransform, 6);
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = L.BodyFont - 10;
-            name.resizeTextMaxSize = L.BodyFont - 2;
+            name.resizeTextMinSize = Fs(L.BodyFont - 10);
+            name.resizeTextMaxSize = Fs(L.BodyFont - 2);
 
             if (stars > 0)
             {
@@ -590,11 +590,11 @@ namespace CardHome
                     var pill = UIKit.Image("Hint", node, new Color(0.15f, 0.12f, 0.12f, 0.85f), Sprites.Soft);
                     pill.raycastTarget = false;
                     UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -112), new Vector2(290, 44));
-                    var t = UIKit.Text(pill.transform, $"Пройди «{prev.Title}»", L.BodyFont - 4, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
+                    var t = UIKit.Text(pill.transform, $"Пройди «{prev.Title}»", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
                     UIKit.Stretch(t.rectTransform, 6);
                     t.resizeTextForBestFit = true;
                     t.resizeTextMinSize = 12;
-                    t.resizeTextMaxSize = L.BodyFont - 4;
+                    t.resizeTextMaxSize = Fs(L.BodyFont - 4);
                 }
                 return;
             }
@@ -616,7 +616,7 @@ namespace CardHome
                 var pill = UIKit.Image("Saved", node, RoomDatabase.Hex("2fb5c4"), Sprites.Panel);
                 pill.raycastTarget = false;
                 UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -112), new Vector2(230, 44));
-                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"▶ день {SaveSystem.LoadRun()?.Night}", L.BodyFont - 4, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"▶ день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
                 UIKit.Stretch(t.rectTransform, 4);
             }
 
@@ -669,9 +669,9 @@ namespace CardHome
             backsInfo = UIKit.Outlined(UIKit.Text(backsContent, "", L.BodyFont + 4, TextAnchor.UpperLeft, Color.white, FontStyle.Bold), 2);
             UIKit.Place(backsInfo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 1), new Vector2(-60, -150), new Vector2(540, 240));
             backsEquip = Place(UIKit.Button(backsContent, "ВЫБРАТЬ", RestartColor, () => game?.EquipBack(previewCode), L.ButtonFont), 210, -440, 440, 110);
-            Place(UIKit.Button(backsContent, "СТРАННИК", SkipColor, () => PreviewBack(CardBacks.DefaultCode), L.ButtonFont - 6), 210, -570, 440, 96);
+            Place(UIKit.Button(backsContent, "СТРАННИК", SkipColor, () => PreviewBack(CardBacks.DefaultCode), Fs(L.ButtonFont - 6)), 210, -570, 440, 96);
 
-            backsTest = Place(UIKit.Button(backsContent, "", RoomDatabase.Hex("5a4632"), () => game?.ToggleTestBacks(), L.ButtonFont - 8), 0, -800, 620, 96);
+            backsTest = Place(UIKit.Button(backsContent, "", RoomDatabase.Hex("5a4632"), () => game?.ToggleTestBacks(), Fs(L.ButtonFont - 8)), 0, -800, 620, 96);
         }
 
         void OpenBacks()
@@ -706,7 +706,7 @@ namespace CardHome
         {
             var tier = CardBacks.Tiers[backsTier];
             backsTierText.text = $"КРУГ {HouseDatabase.Roman(backsTier + 1)} · {tier.Name.ToUpper()}" +
-                                 (tier.Shimmer ? " <size=" + (L.BodyFont - 2) + ">✦ анимация</size>" : "");
+                                 (tier.Shimmer ? " <size=" + (Fs(L.BodyFont - 2)) + ">✦ анимация</size>" : "");
 
             // Десять домов этого круга: 5 × 2.
             Clear(backsGrid);
@@ -741,7 +741,7 @@ namespace CardHome
                 }
                 if (code == game.Progress.EquippedBack) Badge(slot, "✓");
 
-                var name = UIKit.Outlined(UIKit.Text(slot, HouseDatabase.All[theme].Name, L.BodyFont - 4, TextAnchor.UpperCenter, has ? Color.white : Cream, FontStyle.Bold), 2);
+                var name = UIKit.Outlined(UIKit.Text(slot, HouseDatabase.All[theme].Name, Fs(L.BodyFont - 4), TextAnchor.UpperCenter, has ? Color.white : Cream, FontStyle.Bold), 2);
                 UIKit.Place(name.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -6), new Vector2(190, 60));
 
                 var hit = slot.gameObject.AddComponent<Image>();
@@ -772,7 +772,7 @@ namespace CardHome
                     ? "<color=#8be36f>Получена</color>" : "<color=#ffb03a>Открыта в тест-режиме</color>")
                 : $"<color=#ff9a5e>🔒 {CardBacks.Condition(previewCode)}</color>";
             backsInfo.text = $"<color=#ffd34d>{CardBacks.Name(previewCode)}</color>\n{status}\n\n" +
-                             $"<size={L.BodyFont - 2}>Собрано на этом круге: {owned}/{CardBacks.ThemeCount}\n" +
+                             $"<size={Fs(L.BodyFont - 2)}>Собрано на этом круге: {owned}/{CardBacks.ThemeCount}\n" +
                              $"Соперник в этом доме играет такой рубашкой.</size>";
             backsInfo.text = backsInfo.text.Replace("🔒 ", "");
             SetLabel(backsEquip, equipped ? "ВЫБРАНА ✓" : "ВЫБРАТЬ");

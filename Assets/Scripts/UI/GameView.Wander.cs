@@ -315,12 +315,12 @@ namespace CardHome
                 string label = NodeLabel(n);
                 float lw = Mathf.Clamp(label.Length * 15 + 34, 130, 300);
                 UIKit.Place(plate.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, 6), new Vector2(lw, 40));
-                var t = UIKit.Text(plate.transform, label, L.BodyFont - 6, TextAnchor.MiddleCenter,
+                var t = UIKit.Text(plate.transform, label, Fs(L.BodyFont - 6), TextAnchor.MiddleCenter,
                     boss ? RoomDatabase.Hex("6b2b8f") : n.Kind == NodeKind.Elite ? RoomDatabase.Hex("8f2b2b") : InkBrown, FontStyle.Bold);
                 UIKit.Stretch(t.rectTransform, 4);
                 t.resizeTextForBestFit = true;
                 t.resizeTextMinSize = 10;
-                t.resizeTextMaxSize = L.BodyFont - 6;
+                t.resizeTextMaxSize = Fs(L.BodyFont - 6);
             }
 
             if (visited) Badge(node, "✓");
@@ -400,9 +400,9 @@ namespace CardHome
             restInfo = Label(restContent, "", L.StatsFont, Color.white, 150, 90, 1000);
             Label(restContent, "Выбери одно:", L.BodyFont + 4, Cream, 60, 60, 1000, FontStyle.Normal);
             restHeal = Place(UIKit.Button(restContent, "ОТДОХНУТЬ\n+1 ♥", RoomDatabase.Hex("d0473c"), () => game?.RestHeal(), L.ButtonFont), -240, -120, 440, 180);
-            Place(UIKit.Button(restContent, "МАСТЕРСКАЯ\nулучшить карту даром", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true, true), L.ButtonFont - 6),
+            Place(UIKit.Button(restContent, "МАСТЕРСКАЯ\nулучшить карту даром", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true, true), Fs(L.ButtonFont - 6)),
                 240, -120, 440, 180);
-            Place(UIKit.Button(restContent, "КОЛОДА", MenuButton, OpenDeckView, L.ButtonFont - 6), 0, -320, 400, 100);
+            Place(UIKit.Button(restContent, "КОЛОДА", MenuButton, OpenDeckView, Fs(L.ButtonFont - 6)), 0, -320, 400, 100);
         }
 
         void RefreshRest()
@@ -428,7 +428,7 @@ namespace CardHome
             eventText = UIKit.Text(paper.transform, "", L.BodyFont + 6, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
             UIKit.Stretch(eventText.rectTransform, 30);
             eventText.resizeTextForBestFit = true;
-            eventText.resizeTextMinSize = L.BodyFont - 4;
+            eventText.resizeTextMinSize = Fs(L.BodyFont - 4);
             eventText.resizeTextMaxSize = L.BodyFont + 6;
 
             eventChoices = UIKit.Rect("Choices", eventContent);
@@ -505,9 +505,9 @@ namespace CardHome
                 new Vector2(L.CardW * 3 + L.CardGap * 4, L.CardH + 60));
 
             fairInfo = Label(fairContent, "", L.BodyFont, Cream, -20, 70, 1000, FontStyle.Bold);
-            Place(UIKit.Button(fairContent, "УЛУЧШИТЬ КАРТУ", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true), L.ButtonFont - 6), -240, -170, 440, 120);
-            Place(UIKit.Button(fairContent, "УБРАТЬ КАРТУ", ShopColor, () => OpenDeckShop(false), L.ButtonFont - 6), 240, -170, 440, 120);
-            Place(UIKit.Button(fairContent, "КОЛОДА", MenuButton, OpenDeckView, L.ButtonFont - 6), -240, -320, 440, 110);
+            Place(UIKit.Button(fairContent, "УЛУЧШИТЬ КАРТУ", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true), Fs(L.ButtonFont - 6)), -240, -170, 440, 120);
+            Place(UIKit.Button(fairContent, "УБРАТЬ КАРТУ", ShopColor, () => OpenDeckShop(false), Fs(L.ButtonFont - 6)), 240, -170, 440, 120);
+            Place(UIKit.Button(fairContent, "КОЛОДА", MenuButton, OpenDeckView, Fs(L.ButtonFont - 6)), -240, -320, 440, 110);
             Place(UIKit.Button(fairContent, "В ПУТЬ ▶", RestartColor, () => game?.LeaveFair(), L.ButtonFont), 240, -320, 440, 110);
         }
 
@@ -527,7 +527,7 @@ namespace CardHome
                     new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, 30), new Vector2(L.CardW, L.CardH));
                 bool can = game.Gold >= price;
                 rt.GetComponent<Button>().interactable = can;
-                var tag = UIKit.Outlined(UIKit.Text(fairCards, $"● {price}", L.StatsFont - 4, TextAnchor.MiddleCenter, can ? Gold : Bad, FontStyle.Bold), 2.5f);
+                var tag = UIKit.Outlined(UIKit.Text(fairCards, $"● {price}", Fs(L.StatsFont - 4), TextAnchor.MiddleCenter, can ? Gold : Bad, FontStyle.Bold), 2.5f);
                 UIKit.Place(tag.rectTransform, new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f),
                     new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, -L.CardH / 2 - 10), new Vector2(L.CardW, 50));
             }

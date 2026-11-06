@@ -90,19 +90,19 @@ namespace CardHome
         void BuildOpponent()
         {
             oppRoot = UIKit.Rect("Opponent", root);
-            var bg = UIKit.Image("Bg", oppRoot, PanelDim, Sprites.Soft);
+            var bg = UIKit.Image("Bg", oppRoot, PlateTint, UiArt.Plate);
             bg.raycastTarget = false;
             UIKit.Stretch(bg.rectTransform);
 
-            oppInfo = UIKit.Text(oppRoot, "", L.BodyFont - 2, TextAnchor.MiddleLeft, Cream, FontStyle.Bold);
+            oppInfo = UIKit.Text(oppRoot, "", Fs(L.BodyFont - 2), TextAnchor.MiddleLeft, Cream, FontStyle.Bold);
             oppInfo.rectTransform.anchorMin = new Vector2(0, 0);
             oppInfo.rectTransform.anchorMax = new Vector2(0, 1);
             oppInfo.rectTransform.pivot = new Vector2(0, 0.5f);
             oppInfo.rectTransform.offsetMin = new Vector2(20, 8);
             oppInfo.rectTransform.offsetMax = new Vector2(300, -8);
             oppInfo.resizeTextForBestFit = true;
-            oppInfo.resizeTextMinSize = L.BodyFont - 10;
-            oppInfo.resizeTextMaxSize = L.BodyFont - 2;
+            oppInfo.resizeTextMinSize = Fs(L.BodyFont - 10);
+            oppInfo.resizeTextMaxSize = Fs(L.BodyFont - 2);
 
             oppHandRoot = UIKit.Rect("OppHand", oppRoot);
             UIKit.Place(oppHandRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(60, 0), new Vector2(420, 160));

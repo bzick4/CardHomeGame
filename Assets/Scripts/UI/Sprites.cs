@@ -6,7 +6,7 @@ namespace CardHome
     // Все белые/серые — цвет задаётся через Image.color, обводка при этом остаётся тёмной.
     public static class Sprites
     {
-        static Sprite panel, flat, soft, shadow, circle, shadowCircle, pill, dayBg, nightBg, light, frame;
+        static Sprite panel, flat, soft, shadow, circle, shadowCircle, pill, dayBg, nightBg, light, frame, vignette;
 
         // Объёмная плашка: светлый верх, тёмная «губа» снизу, обводка.
         public static Sprite Panel => panel != null ? panel : panel = RoundRect(64, 18, 5, bevel: true);
@@ -123,6 +123,25 @@ namespace CardHome
         {
             var q = new Vector2(Mathf.Abs(p.x), Mathf.Abs(p.y)) - b + new Vector2(r, r);
             return Vector2.Max(q, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(q.x, q.y), 0) - r;
+        }
+
+        // Виньетка: прозрачная середина, к краям — непрозрачно (цвет и силу задаёт Image.color).
+        public static Sprite Vignette => vignette != null ? vignette : vignette = MakeVignette();
+
+        static Sprite MakeVignette()
+        {
+            const int n = 128;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x + 0.5f) / n * 2 - 1, dy = (y + 0.5f) / n * 2 - 1;
+                float d = Mathf.Sqrt(dx * dx * 0.8f + dy * dy * 0.8f);
+                float a = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.55f, 1.25f, d));
+                tex.SetPixel(x, y, new Color(1, 1, 1, a));
+            }
+            tex.Apply(false, true);
+            return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100);
         }
 
         static Sprite Gradient(Color top, Color bottom)

@@ -865,7 +865,7 @@ namespace CardHome
                 AddLog(note);
                 Report.Notes.Add(note);
                 Hint("regular", "Постоянный гость",
-                    "Довольный гость уходит обратно в колоду соперника — он ещё вернётся. Постоянный гость (★) платит на 3 золота больше,\n" +
+                    "Довольный гость уходит обратно в колоду соперника — он ещё вернётся. Постоянный гость («Свой · …») платит на 3 золота больше,\n" +
                     "но если разочаруется — репутация −2.");
             }
             Changed?.Invoke();
@@ -972,7 +972,7 @@ namespace CardHome
             inheritOptions.AddRange(pool.Take(3));
 
             var next = HouseDatabase.Level(Level.Index + 1);
-            AddLog($"<b><color=#ffd34d>«{Level.Title}» выстоял! {new string('★', LastStars)}</color></b>");
+            AddLog($"<b><color=#ffd34d>«{Level.Title}» выстоял! Звёзд: {LastStars} из 3</color></b>");
             if (unlockedNew) AddLog($"<color=#ffd34d>Открыт новый дом: {next.Title}</color>");
             SetPhase(Phase.LevelDone);
             Changed?.Invoke();

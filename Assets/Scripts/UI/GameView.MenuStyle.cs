@@ -122,7 +122,7 @@ namespace CardHome
             UIKit.Stretch(t.rectTransform, 14);
             t.rectTransform.offsetMax = new Vector2(-width * 0.1f, -10);
             t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = L.BodyFont - 8;
+            t.resizeTextMinSize = Fs(L.BodyFont - 8);
             t.resizeTextMaxSize = L.BodyFont + 4;
             return t;
         }
@@ -165,19 +165,25 @@ namespace CardHome
             b.Glow.enabled = primary && enabled;
             b.Label.text = string.IsNullOrEmpty(hint)
                 ? b.Title
-                : $"{b.Title}\n<size={L.BodyFont - 2}><color=#fff1cf>{hint}</color></size>";
+                : $"{b.Title}\n<size={Fs(L.BodyFont - 2)}><color=#fff1cf>{hint}</color></size>";
         }
 
         // Квадратная кнопка-значок, как кнопка меню «≡» в партии.
         Button RoundButton(RectTransform parent, Sprite icon, Vector2 pos, System.Action onClick, float size = 120)
         {
-            var b = UIKit.Button(parent, "", DarkWood, onClick, L.ButtonFont);
+            var round = UiArt.RoundButton;
+            bool art = round != Sprites.Circle;
+            var b = UIKit.Button(parent, "", art ? Color.white : DarkWood, onClick, L.ButtonFont);
             var rt = (RectTransform)b.transform;
             UIKit.Place(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(size, size));
+            var body = (Image)b.targetGraphic;
+            body.sprite = round;
+            body.type = Image.Type.Simple;
+            body.preserveAspect = true;
             var img = UIKit.Image("Icon", rt, Color.white, icon);
             img.raycastTarget = false;
             img.preserveAspect = true;
-            UIKit.Stretch(img.rectTransform, size * 0.2f);
+            UIKit.Stretch(img.rectTransform, size * 0.19f); // иконка ~62% кнопки
             return b;
         }
 
