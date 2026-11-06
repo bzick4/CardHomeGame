@@ -24,38 +24,83 @@
         position: fixed; inset: 0; width: 100%; height: 100%;
         display: block; outline: none; background: #141b33;
       }
+      /* Экран, пока браузер скачивает игру: та же картинка, что у загрузки внутри игры.
+         Блок с названием — в спокойной части неба: в вертикали над домом, в горизонтали слева. */
       #loader {
-        position: fixed; inset: 0; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 28px;
-        background: linear-gradient(#141b33 0%, #223056 45%, #4a4670 70%, #eaa36a 100%);
-        font-family: "Noto Sans", system-ui, sans-serif; color: #f4eadc;
+        position: fixed; inset: 0;
+        background: #141b33 url("loading.jpg") center / cover no-repeat;
+        font-family: "Noto Sans", "Trebuchet MS", system-ui, sans-serif; color: #fff3dc;
         transition: opacity .4s ease;
       }
-      #loader .title { font-size: clamp(24px, 6vw, 44px); font-weight: 700; letter-spacing: .45em; text-shadow: 0 3px 6px rgba(0,0,0,.4); }
-      #loader .sub { font-size: clamp(12px, 3vw, 16px); opacity: .8; letter-spacing: .05em; }
-      #loader .bar { width: min(70vw, 360px); height: 10px; border-radius: 6px; background: rgba(39,49,69,.9); border: 2px solid rgba(90,104,132,.8); overflow: hidden; }
-      #loader .fill { width: 0; height: 100%; background: #ffb834; transition: width .2s ease; }
-      #loader .house { width: 64px; height: 64px; }
+      #loader .panel {
+        position: absolute; left: 50%; top: 11%; transform: translateX(-50%);
+        width: min(90vw, 560px);
+        display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 2.2vh, 22px);
+      }
+      @media (orientation: landscape) {
+        #loader { background-image: url("loading-wide.jpg"); }
+        #loader .panel { left: 27%; top: 50%; transform: translate(-50%, -50%); width: min(46vw, 560px); }
+      }
+      #loader .icon {
+        width: clamp(72px, 20vmin, 150px); aspect-ratio: 1; border-radius: 22%;
+        box-shadow: 0 6px 18px rgba(0,0,0,.55);
+      }
+      /* Название — на красной ленте, как заголовки окон в игре. */
+      #loader .ribbon {
+        width: 100%; aspect-ratio: 713 / 192;
+        background: url("ribbon.png") center / 100% 100% no-repeat;
+        display: flex; align-items: center; justify-content: center; padding-bottom: 4%; box-sizing: border-box;
+      }
+      #loader .title {
+        font-size: clamp(22px, 5.6vmin, 40px); font-weight: 800; letter-spacing: .06em;
+        text-shadow: 0 2px 0 #3b1a10, 2px 0 0 #3b1a10, -2px 0 0 #3b1a10, 0 -2px 0 #3b1a10, 0 4px 8px rgba(0,0,0,.45);
+      }
+      /* Полоса загрузки — в рамке шкалы из игры, внутри золотая заливка. */
+      #loader .bar {
+        position: relative; width: 92%; aspect-ratio: 398 / 56;
+        background: url("bar.png") center / 100% 100% no-repeat;
+      }
+      #loader .track { position: absolute; left: 7%; right: 7%; top: 30%; bottom: 30%; border-radius: 99px; overflow: hidden; }
+      #loader .fill {
+        width: 0; height: 100%; border-radius: 99px;
+        background: linear-gradient(#ffe08a, #ffb834 55%, #e8901c);
+        box-shadow: 0 0 10px rgba(255,200,90,.7); transition: width .2s ease;
+      }
+      #loader .tip {
+        width: 100%; box-sizing: border-box; padding: 14px 26px; text-align: center;
+        background: url("plate.png") center / 100% 100% no-repeat; opacity: .95;
+        font-size: clamp(14px, 3.4vmin, 19px); line-height: 1.35; font-weight: 600;
+        text-shadow: 0 2px 2px rgba(0,0,0,.6);
+      }
+      #loader .tip b { color: #ffd34d; }
     </style>
   </head>
   <body>
     <canvas id="unity-canvas" tabindex="-1"></canvas>
 
     <div id="loader">
-      <svg class="house" viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M6 32 L32 8 L58 32 L52 32 L52 58 L12 58 L12 32 Z" fill="#f4eadc"/>
-        <rect x="40" y="12" width="6" height="14" fill="#f4eadc"/>
-        <rect x="22" y="36" width="10" height="10" fill="#ffc861"/>
-      </svg>
-      <div class="title">ДОМ НА НОЧЬ</div>
-      <div class="bar"><div class="fill" id="fill"></div></div>
-      <div class="sub">Загрузка… На телефоне можно играть и вертикально, и горизонтально</div>
+      <div class="panel">
+        <img class="icon" src="favicon.png" alt="">
+        <div class="ribbon"><div class="title">ДОМ НА НОЧЬ</div></div>
+        <div class="bar"><div class="track"><div class="fill" id="fill"></div></div></div>
+        <div class="tip"><b>Загрузка…</b> <span id="tip"></span></div>
+      </div>
     </div>
 
     <script>
       var canvas = document.querySelector("#unity-canvas");
       var loader = document.querySelector("#loader");
       var fill = document.querySelector("#fill");
+
+      // Совет на время загрузки — как на экране загрузки в самой игре.
+      var tips = [
+        "Карта на такую же комнату складывает уровни: I + I = II.",
+        "Ловушка на пути вора поймает его и принесёт золото.",
+        "Кухня рядом со столовой радует гостей вдвое.",
+        "Долгое нажатие на карту — посмотреть её крупно.",
+        "Играть можно и вертикально, и горизонтально."
+      ];
+      document.querySelector("#tip").textContent = tips[Math.floor(Math.random() * tips.length)];
 
       // Свайпы и двойной тап не должны двигать страницу.
       document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
