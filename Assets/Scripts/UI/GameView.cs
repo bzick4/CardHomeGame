@@ -172,7 +172,14 @@ namespace CardHome
             game = null;
         }
 
-        void OnDestroy() => Unbind();
+        Material locationMat; // свой экземпляр: _Night анимируется
+
+        void OnDestroy()
+        {
+            Unbind();
+            if (locationMat != null) Destroy(locationMat);
+            if (guestDissolve != null) Destroy(guestDissolve);
+        }
 
         // Unity вызывает это, когда меняется размер канваса: поворот телефона, другое окно.
         // Игра закрывается (выход из Play или из приложения) — ничего не перестраиваем.
@@ -244,6 +251,14 @@ namespace CardHome
                 var loc = UIKit.Image("Location", transform, Color.white, location);
                 loc.raycastTarget = false;
                 UIKit.Cover(loc);
+                // Ночь на самом фоне: синее и темнее, а окна и фонари остаются тёплыми (шейдер UI_NightGrade).
+                if (locationMat != null) Destroy(locationMat);
+                locationMat = UiShaders.NewNightGrade();
+                if (locationMat != null)
+                {
+                    locationMat.SetFloat("_Night", NightAlpha(game.State));
+                    loc.material = locationMat;
+                }
                 var dim = UIKit.Image("Dim", transform, new Color(0, 0, 0, 0.3f));
                 dim.raycastTarget = false;
                 UIKit.Stretch(dim.rectTransform);
@@ -256,7 +271,7 @@ namespace CardHome
                 var day = UIKit.Image("DaySky", transform, Color.white, Sprites.DayBackground);
                 UIKit.Stretch(day.rectTransform);
             }
-            BuildNightSky(location != null);
+            BuildNightSky(location != null, locationMat != null);
 
             // Всё остальное — внутри безопасной зоны (без чёлки и полоски «домой»).
             root = UIKit.Rect("SafeArea", transform);

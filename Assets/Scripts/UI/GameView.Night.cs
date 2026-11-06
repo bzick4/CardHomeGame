@@ -31,6 +31,7 @@ namespace CardHome
         Image guestImage, guestIcon, guestLight;
         Text guestMood;
         RectTransform moodBar, moodFill;
+        Material guestDissolve; // фишка гостя растворяется, уходя
         Image moodFillImg;
         string routeKey;
 
@@ -39,7 +40,7 @@ namespace CardHome
 
         // Ночное небо: градиент, луна и мерцающие звёзды. Плавно проявляется целиком.
         // Если у дома свой фон (на нём уже ночь и луна) — вместо неба только тёмная дымка и звёзды.
-        void BuildNightSky(bool overLocation = false)
+        void BuildNightSky(bool overLocation = false, bool graded = false)
         {
             var layer = UIKit.Rect("Night", transform);
             UIKit.Stretch(layer);
@@ -49,7 +50,8 @@ namespace CardHome
 
             if (overLocation)
             {
-                var haze = UIKit.Image("Haze", layer, new Color(0.04f, 0.05f, 0.16f, 0.45f));
+                // Если ночь уже делает шейдер фона — дымка лишь чуть-чуть, иначе погасила бы тёплые окна.
+                var haze = UIKit.Image("Haze", layer, new Color(0.04f, 0.05f, 0.16f, graded ? 0.12f : 0.45f));
                 haze.raycastTarget = false;
                 UIKit.Stretch(haze.rectTransform);
             }
@@ -85,6 +87,11 @@ namespace CardHome
         {
             nightGroup.DOKill();
             nightGroup.DOFade(NightAlpha(phase), 0.8f).SetLink(nightGroup.gameObject);
+            if (locationMat != null)
+            {
+                DOTween.Kill(locationMat);
+                locationMat.DOFloat(NightAlpha(phase), "_Night", 1.2f).SetEase(Ease.InOutSine).SetLink(gameObject);
+            }
         }
 
         // ───────────── Соперник ─────────────
@@ -312,7 +319,9 @@ namespace CardHome
             {
                 var pc = porchCard;
                 porchCard = null;
-                nightSeq.Append(pc.Root.DOScale(0, 0.28f).SetEase(Ease.InBack))
+                // Сыгранная карта растворяется с золотым краем (UI_Dissolve).
+                nightSeq.AppendCallback(() => UiShaders.Dissolve(pc.Root.gameObject, 0.5f))
+                    .AppendInterval(0.5f)
                     .AppendCallback(() => Destroy(pc.Root.gameObject));
             }
 
@@ -346,6 +355,9 @@ namespace CardHome
             UIKit.Stretch(guestImage.rectTransform);
             guestIcon = UIKit.Image("Icon", guestVisual, Color.white);
             guestIcon.raycastTarget = false;
+            if (guestDissolve != null) Destroy(guestDissolve);
+            guestDissolve = UiShaders.NewDissolve();
+            if (guestDissolve != null) guestIcon.material = guestDissolve;
             guestIcon.preserveAspect = true;
             UIKit.Stretch(guestIcon.rectTransform, token * 0.08f);
             // Шкала настроения над фишкой: рамка BoardOverlays/MoodBar, внутри — заливка кодом и число «3/4».
@@ -382,6 +394,7 @@ namespace CardHome
             {
                 mood = 0;
                 guestIcon.sprite = Icons.Guest(g);
+                if (guestDissolve != null) guestDissolve.SetFloat("_Dissolve", 0);
                 bool medallion = ArtStore.Get("Guests/" + g.Id, null) != null;
                 guestImage.enabled = !medallion;
                 guestImage.color = g.Color;
@@ -427,6 +440,7 @@ namespace CardHome
             }
 
             AppendHop(seq, outside, 0.3f, false);
+            if (guestDissolve != null) seq.Append(guestDissolve.DOFloat(1, "_Dissolve", 0.4f).SetEase(Ease.InQuad));
             // Итог гостя у двери: золото — монеты, плюс к репутации — сердце.
             seq.AppendCallback(() =>
             {

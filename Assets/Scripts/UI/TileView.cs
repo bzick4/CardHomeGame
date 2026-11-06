@@ -273,9 +273,28 @@ namespace CardHome
         {
             Root.DOKill(true);
             Root.DOShakeAnchorPos(0.4f, 14, 30).SetLink(Root.gameObject);
+
+            // Комната частично «прогорает» золотым краем (UI_Dissolve) — и проступает пролом.
+            var burn = UiShaders.NewDissolve();
+            if (burn != null && art.enabled)
+            {
+                art.material = burn;
+                walls.material = burn;
+                DOTween.Sequence()
+                    .Append(burn.DOFloat(0.42f, "_Dissolve", 0.3f).SetEase(Ease.OutQuad))
+                    .Append(burn.DOFloat(0, "_Dissolve", 0.45f).SetEase(Ease.InOutSine))
+                    .SetLink(Root.gameObject)
+                    .OnKill(() =>
+                    {
+                        if (art != null) art.material = null;
+                        if (walls != null) walls.material = null;
+                        Object.Destroy(burn);
+                    });
+            }
+
             crack.enabled = true;
             crack.transform.DOKill();
-            crack.transform.DOScale(1, 0.25f).From(1.6f).SetEase(Ease.OutBack).SetLink(crack.gameObject);
+            crack.transform.DOScale(1, 0.25f).From(1.6f).SetDelay(burn != null ? 0.2f : 0).SetEase(Ease.OutBack).SetLink(crack.gameObject);
         }
 
         void SetGlow(Glow mode)

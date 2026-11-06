@@ -89,6 +89,8 @@ namespace CardHome
             var art = FrameArt(tier);
             var img = UIKit.Image("Frame", card, Color.white, art != null ? art : FrameSprite(tier));
             img.raycastTarget = false;
+            var foil = UiShaders.Foil(tier); // блик по рамке у кругов 4+
+            if (foil != null && art != null) img.material = foil;
             var o = art != null ? ArtFrameOut : Vector2.one * (FramePad - 1) / 2;
             var rt = img.rectTransform;
             rt.anchorMin = -o;
