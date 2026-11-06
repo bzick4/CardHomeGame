@@ -326,6 +326,7 @@ namespace CardHome
         Tween holdTimer;
         Vector2 holdStart;
         bool held;
+        GameObject infoButton; // значок «i» на выбранной карте — открыть её крупно
         bool hover, pressed, selected, dragging, browsing, interactable = true;
         Vector2 grabOffset;
         Sequence tween;
@@ -370,6 +371,7 @@ namespace CardHome
             if (isSelected != selected)
             {
                 selected = isSelected;
+                ShowInfoButton(selected);
                 var glow = Parts.Glow;
                 glow.DOKill();
                 glow.enabled = selected;
@@ -380,6 +382,32 @@ namespace CardHome
                 }
             }
             ApplyPose(0.15f);
+        }
+
+        void ShowInfoButton(bool on)
+        {
+            if (on && infoButton == null)
+            {
+                var icon = UiArt.Icon("Info");
+                if (icon == null) return;
+                var img = UIKit.Image("Info", Rt, Color.white, icon);
+                img.preserveAspect = true;
+                var rt = img.rectTransform;
+                float size = Rt.rect.width * 0.34f;
+                UIKit.Place(rt, new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(size * 0.15f, -size * 0.15f), new Vector2(size, size));
+                var b = img.gameObject.AddComponent<Button>();
+                b.transition = Selectable.Transition.None;
+                b.onClick.AddListener(() =>
+                {
+                    Sfx.Click();
+                    owner.Hold(Index);
+                });
+                img.gameObject.AddComponent<PressScale>().Pressed = 0.85f;
+                infoButton = img.gameObject;
+                rt.localScale = Vector3.zero;
+                rt.DOScale(1, 0.2f).SetEase(Ease.OutBack).SetLink(infoButton);
+            }
+            if (infoButton != null) infoButton.SetActive(on);
         }
 
         // Куда должна встать карта в текущем состоянии.
@@ -470,7 +498,8 @@ namespace CardHome
                 held = false; // это было долгое нажатие — карту уже открыли крупно
                 return;
             }
-            if (interactable && !e.dragging) owner.Tap(Index);
+            // Тап передаём всегда: по карте, которой сейчас не сыграть, он откроет крупный просмотр.
+            if (!e.dragging) owner.Tap(Index);
         }
 
         // ───── Перетаскивание на поле ─────

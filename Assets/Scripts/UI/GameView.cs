@@ -353,13 +353,15 @@ namespace CardHome
             handRoot.sizeDelta = new Vector2(L.Portrait ? 820 : 900, L.CardH + 30);
             handView = new HandView(handRoot, L.CardW, L.CardH, handRoot.sizeDelta.x,
                 (card, doors) => BuildCardVisual(handRoot, card.Def, doors, card.Level, compact: true));
-            handView.CardTapped += i => game?.SelectCard(i);
-            handView.CardHeld += i =>
+            // Тап — выбрать карту (повторный — повернуть). Когда ходить нельзя (ночь, ходы кончились), тап открывает
+            // крупный просмотр, как у гостей. Ещё просмотр — значок «i» на выбранной карте и долгое нажатие.
+            handView.CardTapped += i =>
             {
-                if (game == null || i < 0 || i >= game.Hand.Count) return;
-                var c = game.Hand[i];
-                InspectRoom(c.Def, c.Level, i == game.Selected ? game.SelectedDoors : c.Def.Doors, handView.CardRect(i));
+                if (game == null) return;
+                if (game.CanAct) game.SelectCard(i);
+                else InspectHandCard(i);
             };
+            handView.CardHeld += InspectHandCard;
             handView.DragBegan = OnCardDragBegan;
             handView.Dragging = OnCardDragging;
             handView.Dropped = OnCardDropped;
@@ -394,6 +396,13 @@ namespace CardHome
             rotateButton = UIKit.Button(root, "ПОВЕРНУТЬ", RotateColor, () => game?.Rotate(), L.ButtonFont);
             nightButton = UIKit.Button(root, "НОЧЬ", NightColor, OnNightButton, L.ButtonFont);
             menuButton = RoundButton(root, UiArt.Icon("Menu"), Vector2.zero, () => game?.ShowMenu(), 96);
+        }
+
+        void InspectHandCard(int i)
+        {
+            if (game == null || i < 0 || i >= game.Hand.Count) return;
+            var c = game.Hand[i];
+            InspectRoom(c.Def, c.Level, i == game.Selected ? game.SelectedDoors : c.Def.Doors, handView.CardRect(i));
         }
 
         // Название комнаты над клеткой: всплывает, держится секунду и тает.
