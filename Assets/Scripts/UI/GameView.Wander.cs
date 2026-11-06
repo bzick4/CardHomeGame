@@ -194,11 +194,11 @@ namespace CardHome
             var map = game.Map;
             if (map == null) return;
             var w = game.Wander;
-            mapStats.text = $"<color=#c8483c>{new string('♥', Mathf.Max(0, game.Reputation))}</color>   " +
-                            $"<color=#a8741a>● {game.Gold}</color>   шаг {Mathf.Max(0, w.Row + 1)} из {RunMap.Rows}";
+            mapStats.text = $"<color=#c8483c>{Mathf.Max(0, game.Reputation)} реп.</color>   " +
+                            $"<color=#a8741a>{game.Gold} зол.</color>   шаг {Mathf.Max(0, w.Row + 1)} из {RunMap.Rows}";
             StyleMenuButton(deckBtn, false, true, $"{game.RunDeckSize} карт");
             StyleMenuButton(abandonBtn, false, true, abandonArmed ? "нажми ещё раз" : "забег закончится");
-            abandonBtn.Body.color = abandonArmed ? Bad : SkipColor;
+            UIKit.Paint(abandonBtn.Button, abandonArmed ? Bad : SkipColor);
 
             Clear(mapNodes);
 
@@ -323,7 +323,7 @@ namespace CardHome
                 t.resizeTextMaxSize = Fs(L.BodyFont - 6);
             }
 
-            if (visited) Badge(node, "✓");
+            if (visited) CheckBadge(node);
 
             if (current)
             {
@@ -399,7 +399,7 @@ namespace CardHome
 
             restInfo = Label(restContent, "", L.StatsFont, Color.white, 150, 90, 1000);
             Label(restContent, "Выбери одно:", L.BodyFont + 4, Cream, 60, 60, 1000, FontStyle.Normal);
-            restHeal = Place(UIKit.Button(restContent, "ОТДОХНУТЬ\n+1 ♥", RoomDatabase.Hex("d0473c"), () => game?.RestHeal(), L.ButtonFont), -240, -120, 440, 180);
+            restHeal = Place(UIKit.Button(restContent, "ОТДОХНУТЬ\n+1 репутация", RoomDatabase.Hex("d0473c"), () => game?.RestHeal(), L.ButtonFont), -240, -120, 440, 180);
             Place(UIKit.Button(restContent, "МАСТЕРСКАЯ\nулучшить карту даром", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true, true), Fs(L.ButtonFont - 6)),
                 240, -120, 440, 180);
             Place(UIKit.Button(restContent, "КОЛОДА", MenuButton, OpenDeckView, Fs(L.ButtonFont - 6)), 0, -320, 400, 100);
@@ -407,9 +407,9 @@ namespace CardHome
 
         void RefreshRest()
         {
-            restInfo.text = $"<color=#ff6b6b>{new string('♥', Mathf.Max(0, game.Reputation))}</color>    колода: {game.RunDeckSize}";
+            restInfo.text = $"<color=#ff6b6b>Репутация: {Mathf.Max(0, game.Reputation)}</color>    колода: {game.RunDeckSize}";
             restHeal.interactable = game.CanRestHeal;
-            SetLabel(restHeal, game.CanRestHeal ? "ОТДОХНУТЬ\n+1 ♥" : $"ОТДОХНУТЬ\nмаксимум {GameController.WanderMaxReputation} ♥");
+            SetLabel(restHeal, game.CanRestHeal ? "ОТДОХНУТЬ\n+1 репутация" : $"ОТДОХНУТЬ\nмаксимум {GameController.WanderMaxReputation}");
         }
 
         // ───────────── Случай ─────────────
@@ -470,7 +470,7 @@ namespace CardHome
             Clear(eventChoices);
             if (done)
             {
-                Place(UIKit.Button(eventChoices, "ДАЛЬШЕ ▶", RestartColor, () => game?.FinishEvent(), L.ButtonFont), 0, 180, 520, 120);
+                Place(UIKit.Button(eventChoices, "ДАЛЬШЕ", RestartColor, () => game?.FinishEvent(), L.ButtonFont), 0, 180, 520, 120);
                 return;
             }
             for (int i = 0; i < ev.Choices.Length; i++)
@@ -508,12 +508,12 @@ namespace CardHome
             Place(UIKit.Button(fairContent, "УЛУЧШИТЬ КАРТУ", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true), Fs(L.ButtonFont - 6)), -240, -170, 440, 120);
             Place(UIKit.Button(fairContent, "УБРАТЬ КАРТУ", ShopColor, () => OpenDeckShop(false), Fs(L.ButtonFont - 6)), 240, -170, 440, 120);
             Place(UIKit.Button(fairContent, "КОЛОДА", MenuButton, OpenDeckView, Fs(L.ButtonFont - 6)), -240, -320, 440, 110);
-            Place(UIKit.Button(fairContent, "В ПУТЬ ▶", RestartColor, () => game?.LeaveFair(), L.ButtonFont), 240, -320, 440, 110);
+            Place(UIKit.Button(fairContent, "В ПУТЬ", RestartColor, () => game?.LeaveFair(), L.ButtonFont), 240, -320, 440, 110);
         }
 
         void RefreshFair()
         {
-            fairGold.text = $"У тебя ● {game.Gold}";
+            fairGold.text = $"У тебя {game.Gold} зол.";
             fairInfo.text = $"Колода странствия: {game.RunDeckSize} карт";
 
             Clear(fairCards);
@@ -527,9 +527,10 @@ namespace CardHome
                     new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, 30), new Vector2(L.CardW, L.CardH));
                 bool can = game.Gold >= price;
                 rt.GetComponent<Button>().interactable = can;
-                var tag = UIKit.Outlined(UIKit.Text(fairCards, $"● {price}", Fs(L.StatsFont - 4), TextAnchor.MiddleCenter, can ? Gold : Bad, FontStyle.Bold), 2.5f);
-                UIKit.Place(tag.rectTransform, new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f),
-                    new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, -L.CardH / 2 - 10), new Vector2(L.CardW, 50));
+                var tag = new PriceTag(fairCards, Fs(L.StatsFont - 8));
+                tag.Root.anchorMin = tag.Root.anchorMax = new Vector2(0, 0.5f);
+                tag.Root.anchoredPosition = new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, -L.CardH / 2 - 16);
+                tag.Set(price.ToString(), can);
             }
             if (offers.Count == 0)
                 Label(fairCards, "Всё раскупили!", L.StatsFont, Cream, 0, 100);

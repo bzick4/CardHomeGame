@@ -88,19 +88,20 @@ namespace CardHome
             return img;
         }
 
-        // Пухлая кнопка: тень, объёмная плашка, текст с обводкой, проседает при нажатии.
+        // Кнопка: нарисованная (Art/UI/Buttons) цвета, ближайшего к color; текст с обводкой; проседает при нажатии.
         public static Button Button(Transform parent, string label, Color color, Action onClick, int fontSize = 22)
         {
             var root = Rect("Button", parent);
-            DropShadow(root, new Vector2(0, -8));
+            DropShadow(root, new Vector2(0, -8), 0.35f);
             var body = Image("Body", root, color, Sprites.Panel);
             Stretch(body.rectTransform);
 
             var b = root.gameObject.AddComponent<Button>();
             b.targetGraphic = body;
             var colors = b.colors;
-            colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.8f);
+            colors.disabledColor = new Color(0.75f, 0.75f, 0.75f, 1f);
             b.colors = colors;
+            Paint(b, color);
             b.onClick.AddListener(() => { Sfx.Click(); onClick(); });
             root.gameObject.AddComponent<PressScale>();
 
@@ -108,6 +109,40 @@ namespace CardHome
             Stretch(t.rectTransform, 6);
             t.rectTransform.anchoredPosition = new Vector2(0, 3);
             return b;
+        }
+
+        // Перекрасить кнопку: подобрать нарисованную кнопку по цвету (оранжевая — основное, фиолетовая — ночь,
+        // зелёная — согласиться/дальше, золотая — покупки, красная — опасное, серая — пропустить).
+        // Нет картинок — прежняя плашка, окрашенная в color.
+        public static void Paint(Button b, Color color)
+        {
+            var body = (Image)b.targetGraphic;
+            var art = UiArt.Button(ButtonColorFor(color));
+            if (art != Sprites.Panel)
+            {
+                body.sprite = art;
+                body.type = UnityEngine.UI.Image.Type.Sliced;
+                body.color = Color.white;
+                if (body.GetComponent<SlicedFit>() == null) body.gameObject.AddComponent<SlicedFit>().Height = art.rect.height;
+            }
+            else
+            {
+                body.sprite = Sprites.Panel;
+                body.color = color;
+            }
+        }
+
+        // Ближайший нарисованный цвет кнопки — по оттенку.
+        public static UiButtonColor ButtonColorFor(Color c)
+        {
+            Color.RGBToHSV(c, out float h, out float s, out float v);
+            float deg = h * 360;
+            if (s < 0.25f) return UiButtonColor.Grey;
+            if (deg < 15 || deg >= 330) return UiButtonColor.Red;
+            if (deg < 36) return UiButtonColor.Orange;
+            if (deg < 70) return UiButtonColor.Gold;
+            if (deg < 170) return UiButtonColor.Green;
+            return UiButtonColor.Purple;
         }
 
         // Картинка заполняет родителя целиком без искажений (лишнее по краям обрезает маска родителя).
@@ -176,6 +211,29 @@ namespace CardHome
             down = false;
             transform.DOKill();
             transform.DOScale(baseScale, 0.25f).SetEase(Ease.OutBack).SetLink(gameObject);
+        }
+    }
+
+    // Нарисованная растягиваемая картинка (кнопка, плашка) с краями в масштабе высоты элемента:
+    // на маленькой кнопке края не наезжают друг на друга. Пересчёт — только при изменении размера.
+    public class SlicedFit : UIBehaviour
+    {
+        public float Height { get; set; } = 180; // высота исходной картинки
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            Fit();
+        }
+
+        protected override void OnRectTransformDimensionsChange() => Fit();
+
+        void Fit()
+        {
+            var img = GetComponent<UnityEngine.UI.Image>();
+            float h = ((RectTransform)transform).rect.height;
+            if (img == null || h <= 1) return;
+            img.pixelsPerUnitMultiplier = Mathf.Max(1, Height / h);
         }
     }
 }

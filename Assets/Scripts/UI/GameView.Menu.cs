@@ -176,6 +176,10 @@ namespace CardHome
 
         void RefreshMainMenu()
         {
+            SetMenuIcon(continueBtn, UiArt.Icon("Campaign"));
+            SetMenuIcon(newGameBtn, UiArt.Icon("Home"));
+            SetMenuIcon(wanderBtn, UiArt.Icon("Wander"));
+            SetMenuIcon(backsBtn, UiArt.Icon("Deck"));
             bool has = game.HasProgress;
             int saved = game.SavedLevel;
             string contHint = saved >= 0 ? $"{HouseDatabase.Level(saved).Title} · день {SaveSystem.LoadRun()?.Night}"
@@ -228,6 +232,8 @@ namespace CardHome
         {
             if (soundBtn == null) return;
             StyleMenuButton(soundBtn, false, true, Sfx.Muted ? "выключен" : "включён");
+            SetMenuIcon(soundBtn, UiArt.Icon(Sfx.Muted ? "SoundOff" : "SoundOn"));
+            SetMenuIcon(tutorialBtn, UiArt.Icon("Info"));
             StyleMenuButton(tutorialBtn, false, true, "пройти ещё раз");
             StyleMenuButton(resetBtn, false, true, resetArmed ? "нажми ещё раз — всё удалится" : "дома, звёзды, рубашки, забег");
             resetBtn.Glow.enabled = resetArmed;
@@ -259,7 +265,7 @@ namespace CardHome
             levelsTitle = UIKit.Outlined(UIKit.Text(header, "", L.StatsFont + 6, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2.5f);
             UIKit.Stretch(levelsTitle.rectTransform, 10);
             levelsTitle.rectTransform.offsetMin = new Vector2(70, 10);
-            Place(UIKit.Button(levelsContent, "◀", RoomDatabase.Hex("3f7ad4"), () => game?.ShowMenu(), L.ButtonFont + 4), -420, 850, 120, 110);
+            RoundButton(levelsContent, MenuArt.BackIcon, new Vector2(-440, 850), () => game?.ShowMenu(), 120);
 
             levelsTabs = UIKit.Rect("Tabs", levelsContent);
             UIKit.Place(levelsTabs, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 745), new Vector2(900, 80));
@@ -474,7 +480,7 @@ namespace CardHome
                 var pill = UIKit.Image("Saved", node, RoomDatabase.Hex("2fb5c4"), Sprites.Panel);
                 pill.raycastTarget = false;
                 UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -4), new Vector2(240, 46));
-                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"▶ день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"Продолжить: день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
                 UIKit.Stretch(t.rectTransform, 4);
             }
 
@@ -616,7 +622,7 @@ namespace CardHome
                 var pill = UIKit.Image("Saved", node, RoomDatabase.Hex("2fb5c4"), Sprites.Panel);
                 pill.raycastTarget = false;
                 UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -112), new Vector2(230, 44));
-                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"▶ день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"Продолжить: день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
                 UIKit.Stretch(t.rectTransform, 4);
             }
 
@@ -653,11 +659,11 @@ namespace CardHome
             UIKit.Stretch(plank.rectTransform);
             var title = UIKit.Outlined(UIKit.Text(header, "РУБАШКИ", L.StatsFont + 10, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2.5f);
             UIKit.Stretch(title.rectTransform, 10);
-            Place(UIKit.Button(backsContent, "◀", RoomDatabase.Hex("3f7ad4"), () => backsRoot.gameObject.SetActive(false), L.ButtonFont + 4), -420, 850, 120, 110);
+            RoundButton(backsContent, MenuArt.BackIcon, new Vector2(-440, 850), () => backsRoot.gameObject.SetActive(false), 120);
 
             // Переключатель окантовки (круга).
-            Place(UIKit.Button(backsContent, "◀", MenuButton, () => SwitchBackTier(-1), L.ButtonFont), -400, 745, 110, 90);
-            Place(UIKit.Button(backsContent, "▶", MenuButton, () => SwitchBackTier(1), L.ButtonFont), 400, 745, 110, 90);
+            Place(UIKit.Button(backsContent, "‹", MenuButton, () => SwitchBackTier(-1), L.ButtonFont + 10), -400, 745, 110, 90);
+            Place(UIKit.Button(backsContent, "›", MenuButton, () => SwitchBackTier(1), L.ButtonFont + 10), 400, 745, 110, 90);
             backsTierText = Label(backsContent, "", L.StatsFont + 2, Color.white, 745, 90, 640);
 
             backsGrid = UIKit.Rect("Grid", backsContent);
@@ -739,7 +745,7 @@ namespace CardHome
                     lockIcon.raycastTarget = false;
                     UIKit.Place(lockIcon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(70, 70));
                 }
-                if (code == game.Progress.EquippedBack) Badge(slot, "✓");
+                if (code == game.Progress.EquippedBack) CheckBadge(slot);
 
                 var name = UIKit.Outlined(UIKit.Text(slot, HouseDatabase.All[theme].Name, Fs(L.BodyFont - 4), TextAnchor.UpperCenter, has ? Color.white : Cream, FontStyle.Bold), 2);
                 UIKit.Place(name.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -6), new Vector2(190, 60));
@@ -775,19 +781,29 @@ namespace CardHome
                              $"<size={Fs(L.BodyFont - 2)}>Собрано на этом круге: {owned}/{CardBacks.ThemeCount}\n" +
                              $"Соперник в этом доме играет такой рубашкой.</size>";
             backsInfo.text = backsInfo.text.Replace("🔒 ", "");
-            SetLabel(backsEquip, equipped ? "ВЫБРАНА ✓" : "ВЫБРАТЬ");
+            SetLabel(backsEquip, equipped ? "ВЫБРАНА" : "ВЫБРАТЬ");
             backsEquip.interactable = canUse && !equipped;
 
             SetLabel(backsTest, game.TestAllBacks ? "ТЕСТ: ВСЕ ОТКРЫТЫ — ВКЛ" : "ТЕСТ: ВСЕ ОТКРЫТЫ — ВЫКЛ");
-            ((Image)backsTest.targetGraphic).color = game.TestAllBacks ? RoomDatabase.Hex("f59a2c") : RoomDatabase.Hex("5a4632");
+            UIKit.Paint(backsTest, game.TestAllBacks ? RoomDatabase.Hex("f59a2c") : SkipColor);
         }
 
-        void Badge(Transform parent, string text)
+        // Зелёная галочка в углу (пройдено, выбрано) — значок Icons/Check.
+        void CheckBadge(Transform parent)
         {
+            var check = UiArt.Icon("Check");
+            if (check != null)
+            {
+                var img = UIKit.Image("Check", parent, Color.white, check);
+                img.raycastTarget = false;
+                img.preserveAspect = true;
+                UIKit.Place(img.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-8, -8), new Vector2(64, 64));
+                return;
+            }
             var badge = UIKit.Image("Badge", parent, Good, Sprites.Circle);
             badge.raycastTarget = false;
             UIKit.Place(badge.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-8, -8), new Vector2(54, 54));
-            var t = UIKit.Outlined(UIKit.Text(badge.transform, text, 30, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+            var t = UIKit.Outlined(UIKit.Text(badge.transform, "+", 34, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
             UIKit.Stretch(t.rectTransform);
         }
     }

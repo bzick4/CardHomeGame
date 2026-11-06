@@ -39,6 +39,7 @@ namespace CardHome
 
         RectTransform gameOverRoot, gameOverContent;
         Text gameOverTitle, gameOverBody;
+        Image gameOverIcon;
 
         RectTransform hintRoot, hintContent;
         Text hintTitle, hintBody;
@@ -222,7 +223,7 @@ namespace CardHome
             UIKit.TopBand(totals.rectTransform, top + 10, 110, 30);
             items.Add(totals.rectTransform);
 
-            var next = UIKit.Button(summaryPanel, game.IsTutorial ? "НАЧАТЬ ИГРУ ▶" : "ДАЛЬШЕ ▶", RestartColor,
+            var next = UIKit.Button(summaryPanel, game.IsTutorial ? "НАЧАТЬ ИГРУ" : "ДАЛЬШЕ", RestartColor,
                 () => game?.ContinueAfterSummary(), L.ButtonFont);
             UIKit.Place((RectTransform)next.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 36), new Vector2(520, 110));
 
@@ -318,11 +319,41 @@ namespace CardHome
             UIKit.TopBand(shopGold.rectTransform, 20, 70);
 
             int f = Fs(L.ButtonFont - 10);
-            rerollButton = Place(UIKit.Button(shop, "", ShopColor, () => game?.RerollReward(), f), -320, 60, 300, 150);
-            actionButton = Place(UIKit.Button(shop, "", ShopColor, () => game?.BuyExtraAction(), f), 0, 60, 300, 150);
-            repairButton = Place(UIKit.Button(shop, "", ShopColor, () => game?.RepairAll(), f), 320, 60, 300, 150);
-            upgradeButton = Place(UIKit.Button(shop, "", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true), f), -160, -130, 300, 150);
-            removeButton = Place(UIKit.Button(shop, "", ShopColor, () => OpenDeckShop(false), f), 160, -130, 300, 150);
+            rerollButton = ShopButton(shop, "Reroll", () => game?.RerollReward(), f, -320, 60);
+            actionButton = ShopButton(shop, "ExtraMove", () => game?.BuyExtraAction(), f, 0, 60);
+            repairButton = ShopButton(shop, "Repair", () => game?.RepairAll(), f, 320, 60);
+            upgradeButton = ShopButton(shop, "Upgrade", () => OpenDeckShop(true), f, -160, -130);
+            removeButton = ShopButton(shop, "Remove", () => OpenDeckShop(false), f, 160, -130);
+        }
+
+        // Кнопка лавки: значок слева, название справа, ценник в правом верхнем углу.
+        readonly Dictionary<Button, PriceTag> shopTags = new Dictionary<Button, PriceTag>();
+
+        Button ShopButton(RectTransform parent, string icon, System.Action onClick, int font, float x, float y)
+        {
+            var b = Place(UIKit.Button(parent, "", ShopColor, onClick, font), x, y, 300, 150);
+            var rt = (RectTransform)b.transform;
+            var img = UIKit.Image("Icon", b.targetGraphic.transform, Color.white, UiArt.Icon(icon));
+            img.raycastTarget = false;
+            img.preserveAspect = true;
+            UIKit.Place(img.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(18, 6), new Vector2(84, 84));
+            var label = b.GetComponentInChildren<Text>();
+            label.rectTransform.offsetMin = new Vector2(104, label.rectTransform.offsetMin.y);
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = L.MinFont;
+            label.resizeTextMaxSize = font;
+            var tag = new PriceTag(rt, Fs(L.BodyFont - 4));
+            tag.Root.anchorMin = tag.Root.anchorMax = tag.Root.pivot = new Vector2(1, 1);
+            tag.Root.anchoredPosition = new Vector2(16, 22);
+            shopTags[b] = tag;
+            return b;
+        }
+
+        void SetPrice(Button b, int price, bool show, string prefix = "")
+        {
+            var tag = shopTags[b];
+            tag.Root.gameObject.SetActive(show);
+            if (show) tag.Set(prefix + price, game.Gold >= price);
         }
 
         static void SetLabel(Button b, string text) => b.GetComponentInChildren<Text>().text = text;
@@ -346,17 +377,22 @@ namespace CardHome
                 : $"Следующей ночью соперник пришлёт гостей: <color=#ffd34d>{game.Level.GuestsOnNight(game.Night)}</color>";
 
             int gold = game.Gold;
-            shopGold.text = $"ЛАВКА · у тебя ● {gold}";
-            SetLabel(rerollButton, $"Новые награды\n● {GameController.RerollPrice}");
+            shopGold.text = $"ЛАВКА · у тебя {gold} зол.";
+            SetLabel(rerollButton, "Новые награды");
+            SetPrice(rerollButton, GameController.RerollPrice, true);
             rerollButton.interactable = gold >= GameController.RerollPrice;
-            SetLabel(actionButton, game.ExtraActionBought ? "+1 ход завтра\nкуплено ✓" : $"+1 ход завтра\n● {GameController.ExtraActionPrice}");
+            SetLabel(actionButton, game.ExtraActionBought ? "+1 ход завтра\nкуплено" : "+1 ход завтра");
+            SetPrice(actionButton, GameController.ExtraActionPrice, !game.ExtraActionBought);
             actionButton.interactable = !game.ExtraActionBought && gold >= GameController.ExtraActionPrice;
-            SetLabel(upgradeButton, $"Улучшить карту\nот ● {GameController.UpgradePrice(2)}");
+            SetLabel(upgradeButton, "Улучшить карту");
+            SetPrice(upgradeButton, GameController.UpgradePrice(2), true, "от ");
             upgradeButton.interactable = gold >= GameController.UpgradePrice(2);
-            SetLabel(removeButton, $"Убрать карту\n● {GameController.RemovePrice}");
+            SetLabel(removeButton, "Убрать карту");
+            SetPrice(removeButton, GameController.RemovePrice, true);
             removeButton.interactable = game.CanRemoveCards && gold >= GameController.RemovePrice;
             int broken = game.Grid.BrokenCount();
-            SetLabel(repairButton, broken > 0 ? $"Починить всё ({broken})\n● {GameController.RepairPrice}" : "Починить всё\nвсё цело");
+            SetLabel(repairButton, broken > 0 ? $"Починить всё ({broken})" : "Починить всё\nвсё цело");
+            SetPrice(repairButton, GameController.RepairPrice, broken > 0);
             repairButton.interactable = broken > 0 && gold >= GameController.RepairPrice;
         }
 
@@ -422,7 +458,7 @@ namespace CardHome
                     label = $"{card.Title} ×{count}";
                 }
                 var c = card;
-                var b = UIKit.Button(removeGrid, label, card.Def.Color,
+                var b = UIKit.Button(removeGrid, label, upgradeMode || freeUpgrade ? ShopColor : Bad,
                     () =>
                     {
                         if (freeUpgrade) game?.RestUpgrade(c);
@@ -449,6 +485,11 @@ namespace CardHome
         void BuildInheritOverlay()
         {
             inheritRoot = Overlay("LevelDone", 0.75f, out inheritContent);
+            var trophy = UIKit.Image("Trophy", inheritContent, Color.white, UiArt.Icon("Trophy"));
+            trophy.raycastTarget = false;
+            trophy.preserveAspect = true;
+            trophy.enabled = trophy.sprite != null;
+            UIKit.Place(trophy.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 840), new Vector2(170, 170));
             inheritTitle = Label(inheritContent, "", L.StatsFont + 30, Gold, 700, 120);
             inheritStars = UIKit.Rect("Stars", inheritContent);
             UIKit.Place(inheritStars, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 560), new Vector2(480, 150));
@@ -602,6 +643,11 @@ namespace CardHome
         void BuildGameOverOverlay()
         {
             gameOverRoot = Overlay("GameOver", 0.7f, out gameOverContent);
+            // Над заголовком — кубок (победа) или череп (дом закрылся).
+            gameOverIcon = UIKit.Image("Icon", gameOverContent, Color.white);
+            gameOverIcon.raycastTarget = false;
+            gameOverIcon.preserveAspect = true;
+            UIKit.Place(gameOverIcon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 470), new Vector2(240, 240));
             gameOverTitle = Label(gameOverContent, "", L.StatsFont + 40, Gold, 260, 140);
             gameOverBody = Label(gameOverContent, "", L.StatsFont, Color.white, 60, 260, 1000, FontStyle.Bold);
             Place(UIKit.Button(gameOverContent, "ЕЩЁ РАЗ", RestartColor, () => game?.RetryLevel(), L.ButtonFont), 0, -180, 520, 120);
@@ -612,6 +658,8 @@ namespace CardHome
         {
             gameOverTitle.text = game.Won ? "ПОБЕДА!" : "ДОМ ЗАКРЫЛСЯ";
             gameOverTitle.color = game.Won ? Gold : Bad;
+            gameOverIcon.sprite = UiArt.Icon(game.Won ? "Trophy" : "Skull");
+            gameOverIcon.enabled = gameOverIcon.sprite != null;
             gameOverBody.text = game.GameOverText;
         }
 

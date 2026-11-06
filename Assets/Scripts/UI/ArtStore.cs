@@ -76,6 +76,19 @@ namespace CardHome
             return ArtScope.Global;
         }
 
+        // Выгрузить одну картинку (например, большой фон экрана загрузки, который больше не нужен).
+        public static void Unload(string path)
+        {
+            if (!entries.TryGetValue(path, out var e)) return;
+            if (e.Sprite != null)
+            {
+                if (e.OwnsTexture && e.Sprite.texture != null) UnityEngine.Object.Destroy(e.Sprite.texture);
+                if (e.OwnsSprite) UnityEngine.Object.Destroy(e.Sprite);
+            }
+            entries.Remove(path);
+            DOVirtual.DelayedCall(0.2f, () => Resources.UnloadUnusedAssets(), ignoreTimeScale: true);
+        }
+
         // Выгрузить набор. Звать, когда то, что его показывало, уже уничтожено (или будет уничтожено в этом кадре).
         public static void Release(ArtScope scope)
         {

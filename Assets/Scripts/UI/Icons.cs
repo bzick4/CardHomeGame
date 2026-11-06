@@ -16,13 +16,13 @@ namespace CardHome
         public static Sprite Guest(GuestDef g) => Get("Guests/" + g.Id, () => PaintGuest(g.Id));
         public static Sprite House(HouseDef h) => Get("Houses/" + h.Id, () => PaintRoom(h.IconRoom));
         // Трещины для сломанной комнаты (полупрозрачные, поверх иконки).
-        public static Sprite Crack => Get("Crack", PaintCrack);
+        public static Sprite Crack => UiArt.Crack ?? Get("Crack", PaintCrack);
         // Картинка комнаты для лица карты: Art/RoomArt/<Тип>.png (квадрат с прозрачными углами). Нет — null.
         public static Sprite RoomArt(RoomType t) => ArtStore.Get("RoomArt/" + t, null);
         // Пергамент под описание (растягивается по 9 частям). Нет — null.
         public static Sprite TextPanel => ArtStore.Get("Cards/TextPanel", null);
 
-        public static Sprite Coin => Get("Coin", () => new Painter().Circle(0, 0, 0.8f, Gold).Circle(0, 0, 0.5f, H("ffe27a"), false).Box(0, 0, 0.12f, 0.36f, 0.05f, H("e0a91f"), false));
+        public static Sprite Coin => UiArt.Icon("Gold") ?? Get("Coin", () => new Painter().Circle(0, 0, 0.8f, Gold).Circle(0, 0, 0.5f, H("ffe27a"), false).Box(0, 0, 0.12f, 0.36f, 0.05f, H("e0a91f"), false));
 
         static Painter PaintCrack()
         {

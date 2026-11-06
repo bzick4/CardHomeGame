@@ -30,6 +30,8 @@ namespace CardHome
         RectTransform guestToken, guestVisual, routeLayer;
         Image guestImage, guestIcon, guestLight;
         Text guestMood;
+        RectTransform moodBar, moodFill;
+        Image moodFillImg;
         string routeKey;
 
         static float NightAlpha(Phase p) =>
@@ -219,8 +221,6 @@ namespace CardHome
             edge.DOFade(0.3f, 0.8f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(edge.gameObject);
             var label = UIKit.Outlined(UIKit.Text(porchSlot, "ВХОД", L.BodyFont + 2, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 2);
             UIKit.Stretch(label.rectTransform);
-            var arrow = UIKit.Outlined(UIKit.Text(porchSlot, "▲", L.BodyFont, TextAnchor.LowerCenter, Gold, FontStyle.Bold), 2);
-            UIKit.Place(arrow.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 0), new Vector2(0, -4), new Vector2(60, 30));
         }
 
         void PutOnPorch(GuestCard card)
@@ -348,8 +348,28 @@ namespace CardHome
             guestIcon.raycastTarget = false;
             guestIcon.preserveAspect = true;
             UIKit.Stretch(guestIcon.rectTransform, token * 0.08f);
-            guestMood = UIKit.Outlined(UIKit.Text(guestVisual, "", L.BodyFont + 2, TextAnchor.LowerCenter, Color.white, FontStyle.Bold));
-            UIKit.Place(guestMood.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 0), new Vector2(0, 4), new Vector2(220, 40));
+            // Шкала настроения над фишкой: рамка BoardOverlays/MoodBar, внутри — заливка кодом и число «3/4».
+            var barArt = UiArt.MoodBar;
+            var bar = UIKit.Image("MoodBar", guestVisual, barArt != null ? Color.white : new Color(0.1f, 0.07f, 0.06f, 0.9f), barArt != null ? barArt : Sprites.Flat);
+            bar.raycastTarget = false;
+            moodBar = bar.rectTransform;
+            float barW = L.Cell * 1.05f, barH = Mathf.Max(34, L.Cell * 0.2f);
+            UIKit.Place(moodBar, new Vector2(0.5f, 1), new Vector2(0.5f, 0), new Vector2(0, 6), new Vector2(barW, barH));
+            if (barArt != null) bar.gameObject.AddComponent<SlicedFit>().Height = 56;
+            var track = UIKit.Rect("Track", moodBar);
+            UIKit.Stretch(track);
+            track.offsetMin = new Vector2(barH * 0.55f, barH * 0.22f);
+            track.offsetMax = new Vector2(-barH * 0.55f, -barH * 0.22f);
+            moodFillImg = UIKit.Image("Fill", track, Good, Sprites.Soft);
+            moodFillImg.raycastTarget = false;
+            moodFill = moodFillImg.rectTransform;
+            moodFill.anchorMin = Vector2.zero;
+            moodFill.anchorMax = new Vector2(0, 1);
+            moodFill.offsetMin = moodFill.offsetMax = Vector2.zero;
+            moodBar.SetAsFirstSibling(); // под текстом
+            guestMood = UIKit.Outlined(UIKit.Text(moodBar, "", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
+            UIKit.Stretch(guestMood.rectTransform);
+            guestMood.horizontalOverflow = HorizontalWrapMode.Overflow;
             guestToken.gameObject.SetActive(false);
         }
 
@@ -361,8 +381,11 @@ namespace CardHome
             seq.AppendCallback(() =>
             {
                 mood = 0;
-                guestImage.color = g.Color;
                 guestIcon.sprite = Icons.Guest(g);
+                bool medallion = ArtStore.Get("Guests/" + g.Id, null) != null;
+                guestImage.enabled = !medallion;
+                guestImage.color = g.Color;
+                UIKit.Stretch(guestIcon.rectTransform, medallion ? 0 : L.Cell * 0.5f * 0.08f);
                 guestToken.SetAsLastSibling();
                 guestToken.anchoredPosition = outside;
                 guestVisual.anchoredPosition = Vector2.zero;
@@ -430,7 +453,14 @@ namespace CardHome
 
         void UpdateMood(GuestDef g, int mood)
         {
-            guestMood.text = g.IsThreat ? "" : $"{mood}/{g.Need}";
+            // У угроз настроения нет — шкалы тоже нет.
+            moodBar.gameObject.SetActive(!g.IsThreat);
+            if (g.IsThreat) return;
+            guestMood.text = $"{mood}/{g.Need}";
+            float t = g.Need > 0 ? Mathf.Clamp01(mood / (float)g.Need) : 1;
+            moodFill.DOKill();
+            moodFill.DOAnchorMax(new Vector2(t, 1), 0.2f).SetLink(moodFill.gameObject);
+            moodFillImg.color = mood >= g.Need ? Good : mood > 0 ? RoomDatabase.Hex("ffb834") : Bad;
         }
 
         // «+3» / «−2» всплывает над гостем и тает.
@@ -521,12 +551,12 @@ namespace CardHome
             if (g.IsThreat)
             {
                 bool caught = trap >= 0;
-                RouteMarker(end, g, caught ? Good : color, caught ? "ПОПАДЁТСЯ ✓" : "ДОБЕРЁТСЯ!");
+                RouteMarker(end, g, caught ? Good : color, caught ? "ПОПАДЁТСЯ" : "ДОБЕРЁТСЯ!");
             }
             else
             {
                 bool ok = predicted.Mood >= g.Need;
-                RouteMarker(end, g, ok ? Good : Bad, $"≈ {predicted.Mood}/{g.Need} {(ok ? "✓" : "✗")}");
+                RouteMarker(end, g, ok ? Good : Bad, $"~{predicted.Mood}/{g.Need} {(ok ? "доволен" : "недоволен")}");
             }
         }
 

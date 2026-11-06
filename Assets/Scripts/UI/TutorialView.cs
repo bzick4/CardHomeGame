@@ -39,7 +39,8 @@ namespace CardHome
         RectTransform root, frame, bubble, arrow, skipRoot;
         CanvasGroup group;
         readonly Image[] dims = new Image[4];
-        Text text, arrowText;
+        Text text;
+        Image tail;
         Button nextButton;
 
         public static TutorialView Create(GameView view, GameController game, Transform parent, int startStep)
@@ -216,7 +217,7 @@ namespace CardHome
                 Text = "Это <b>итоги ночи</b>: кто доволен, сколько золота и репутации. " +
                        "Дальше — награды, лавка и десять домов, которые открываются по очереди. Удачи!",
                 Target = () => view.SummaryRect,
-                Button = "НАЧАТЬ ИГРУ ▶",
+                Button = "НАЧАТЬ ИГРУ",
                 OnButton = () => game.ContinueAfterSummary(),
             });
         }
@@ -286,21 +287,38 @@ namespace CardHome
                 dims[i].raycastTarget = true; // ловит все касания мимо «окна»
             }
 
-            frame = UIKit.Image("Frame", root, Gold, Sprites.Frame).rectTransform;
-            frame.GetComponent<Image>().raycastTarget = false;
-            frame.GetComponent<Image>().DOFade(0.35f, 0.5f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(frame.gameObject);
+            // Подсветка цели — золотая рамка BoardOverlays/TileHighlight, мягко мерцает.
+            var highlight = UiArt.TileHighlight;
+            bool highlightArt = highlight != Sprites.Frame;
+            var frameImg = UIKit.Image("Frame", root, highlightArt ? Color.white : Gold, highlight);
+            frame = frameImg.rectTransform;
+            frameImg.raycastTarget = false;
+            frameImg.DOFade(0.45f, 0.5f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(frame.gameObject);
 
-            arrow = UIKit.Rect("Arrow", root);
-            arrow.sizeDelta = new Vector2(120, 90);
-            arrowText = UIKit.Outlined(UIKit.Text(arrow, "▼", 72, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
-            UIKit.Stretch(arrowText.rectTransform);
-
+            // Облачко подсказки (Panels/Bubble) и хвостик к цели (Panels/BubbleTail).
             bubble = UIKit.Rect("Bubble", root);
-            UIKit.DropShadow(bubble, new Vector2(0, -12), 0.55f);
-            var border = UIKit.Image("Border", bubble, Wood, Sprites.Panel);
-            UIKit.Stretch(border.rectTransform);
-            var paper = UIKit.Image("Paper", bubble, Paper, Sprites.Flat);
-            UIKit.Stretch(paper.rectTransform, 16);
+            UIKit.DropShadow(bubble, new Vector2(0, -12), 0.5f);
+            var bubbleArt = UiArt.Bubble;
+            Image paper;
+            if (bubbleArt != Sprites.Flat)
+            {
+                paper = UIKit.Image("Paper", bubble, Color.white, bubbleArt);
+                UIKit.Stretch(paper.rectTransform);
+            }
+            else
+            {
+                var border = UIKit.Image("Border", bubble, Wood, Sprites.Panel);
+                UIKit.Stretch(border.rectTransform);
+                paper = UIKit.Image("Paper", bubble, Paper, Sprites.Flat);
+                UIKit.Stretch(paper.rectTransform, 16);
+            }
+            arrow = UIKit.Rect("Tail", root);
+            var tailArt = UiArt.BubbleTail;
+            tail = UIKit.Image("Tail", arrow, Color.white, tailArt);
+            tail.raycastTarget = false;
+            tail.preserveAspect = true;
+            UIKit.Stretch(tail.rectTransform);
+            tail.enabled = tailArt != null;
 
             text = UIKit.Text(paper.transform, "", L.BodyFont + 6, TextAnchor.MiddleLeft, Ink, FontStyle.Normal);
             text.rectTransform.anchorMin = Vector2.zero;
@@ -317,7 +335,7 @@ namespace CardHome
             // Пропустить обучение можно в любой момент — кнопка всегда поверх затемнения.
             skipRoot = UIKit.Rect("Skip", (RectTransform)transform.parent);
             UIKit.Stretch(skipRoot);
-            var skip = UIKit.Button(skipRoot, "ПРОПУСТИТЬ ▶▶", RoomDatabase.Hex("8a7f72"), () => game?.SkipTutorial(), Fs(L.ButtonFont - 10));
+            var skip = UIKit.Button(skipRoot, "ПРОПУСТИТЬ", RoomDatabase.Hex("8a7f72"), () => game?.SkipTutorial(), Fs(L.ButtonFont - 10));
             var srt = (RectTransform)skip.transform;
             UIKit.Place(srt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -24), new Vector2(330, 80));
 
@@ -376,12 +394,22 @@ namespace CardHome
 
             if (hasHole)
             {
-                arrowText.text = above ? "▼" : "▲";
-                float ay = above ? hole.yMax + 60 : hole.yMin - 60;
+                // Хвостик облачка — от края облачка к цели: снизу, если облачко над целью, иначе сверху (отражён).
+                // Нарисован остриём влево-вниз; цель правее середины облачка — отражаем по горизонтали.
+                const float ts = 120;
+                float tx = Mathf.Clamp(hole.center.x, area.center.x - w / 2 + 160, area.center.x + w / 2 - 160);
+                bool right = hole.center.x > tx + 10;
+                // Опорная точка — верх хвостика, чуть заходит внутрь облачка; снизу облачка хвост смотрит вниз,
+                // сверху — отражён по вертикали и смотрит вверх.
+                float edgeY = above ? y + 14 : y + h - 14;
                 arrow.DOKill();
-                SetRect(arrow, new Rect(hole.center.x - 60, ay - 45, 120, 90));
-                arrow.DOAnchorPosY(above ? 18 : -18, 0.45f).SetRelative().SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine)
-                    .SetLink(arrow.gameObject);
+                arrow.anchorMin = arrow.anchorMax = new Vector2(0.5f, 0.5f);
+                arrow.pivot = new Vector2(0.5f, 1);
+                arrow.sizeDelta = new Vector2(ts, ts);
+                arrow.anchoredPosition = new Vector2(tx, edgeY);
+                arrow.localScale = new Vector3(right ? -1 : 1, above ? 1 : -1, 1);
+                arrow.SetSiblingIndex(bubble.GetSiblingIndex()); // под облачком: стык не виден
+                arrow.gameObject.SetActive(tail.enabled);
             }
         }
 

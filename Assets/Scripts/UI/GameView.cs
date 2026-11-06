@@ -115,6 +115,11 @@ namespace CardHome
         RectTransform root, gridRoot, handRoot, statsBar, phaseBar, pileRoot;
         HandView handView;
         Text statsText, phaseText, logText, pileCount;
+        // Верхняя панель: название и ночь — текстом, золото и сердца — значками справа.
+        RectTransform statsRight;
+        IconValue statGold;
+        HeartsRow statHearts;
+        float statsTextRight;
         Button rotateButton, nightButton, menuButton;
 
         // Золото на счётчике держится, пока ночью не прилетят монеты на экране итогов.
@@ -349,9 +354,12 @@ namespace CardHome
             BuildDragGhost();
             BuildGuestToken();
 
-            statsText = UIKit.Outlined(UIKit.Text(root, "", L.StatsFont, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
+            statsText = UIKit.Outlined(UIKit.Text(root, "", L.StatsFont, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold));
             statsText.resizeTextForBestFit = true;
             statsText.resizeTextMinSize = Fs(L.StatsFont / 2);
+            statsRight = UIKit.Rect("StatsRight", root);
+            statGold = new IconValue(statsRight, UiArt.Icon("Gold"), L.StatsFont - 4, Gold);
+            statHearts = new HeartsRow(statsRight, L.StatsFont * 1.05f);
             statsText.resizeTextMaxSize = L.StatsFont;
             phaseText = UIKit.Outlined(UIKit.Text(root, "", Fs(L.BodyFont - 2), TextAnchor.MiddleCenter, Color.white), 2);
             phaseText.resizeTextForBestFit = true;
@@ -471,8 +479,13 @@ namespace CardHome
         void ArrangePortrait()
         {
             const float pad = 32;
-            statsBar = Backing(statsText, PlateTint, UiArt.Plate, 12);
+            statsBar = Backing(statsText, Color.white, UiArt.TopBar, 12);
+            var bar = statsBar.GetComponent<Image>();
+            if (bar.sprite != Sprites.Panel) bar.gameObject.AddComponent<SlicedFit>().Height = 140;
+            else bar.color = DarkWood;
             UIKit.TopBand(statsBar, 16, 84, pad);
+            statsText.rectTransform.offsetMin = new Vector2(34, statsText.rectTransform.offsetMin.y);
+            AttachStatsRight(statsBar, 30);
             statsBar.offsetMin += new Vector2(104, 0);
             statsText.rectTransform.anchoredPosition = new Vector2(0, 3);
             UIKit.Place((RectTransform)menuButton.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(pad - 8, -8), new Vector2(100, 100));
@@ -533,6 +546,7 @@ namespace CardHome
             oppRoot.SetParent(panel, false);
             UIKit.TopBand(statsText.rectTransform, 18, 56 * s, 18);
             statsBar = statsText.rectTransform;
+            AttachStatsRight(statsBar, 0);
             float y = 18 + 56 * s + 6;
             UIKit.TopBand(phaseText.rectTransform, y, 80 * s, 18);
             y += 80 * s + 8;
@@ -580,6 +594,17 @@ namespace CardHome
             UIKit.Place(handRoot, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-70, handLift), handRoot.sizeDelta);
             pileRoot.SetParent(main, false);
             UIKit.Place(pileRoot, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 12), pileRoot.sizeDelta);
+        }
+
+        // Золото и сердца — справа в полосе статуса; ширину текста названия ужимаем под них в UpdateStats.
+        void AttachStatsRight(RectTransform bar, float rightPad)
+        {
+            statsRight.SetParent(bar, false);
+            statsRight.anchorMin = statsRight.anchorMax = new Vector2(1, 0.5f);
+            statsRight.pivot = new Vector2(1, 0.5f);
+            statsRight.anchoredPosition = new Vector2(-rightPad, 2);
+            statsRight.sizeDelta = new Vector2(10, L.StatsFont * 1.3f);
+            statsTextRight = statsText.rectTransform.offsetMax.x;
         }
 
         static void PlaceBottom(Button b, Vector2 anchor, Vector2 pos, Vector2 size)
@@ -696,7 +721,7 @@ namespace CardHome
         {
             var t = b.GetComponentInChildren<Text>();
             if (t.text != label) t.text = label;
-            ((Image)b.targetGraphic).color = color;
+            UIKit.Paint(b, color);
         }
 
         string PhaseHint()
@@ -737,11 +762,26 @@ namespace CardHome
         {
             if (game == null || statsText == null) return;
             int gold = goldHeld ? shownGold : game.Gold;
-            string coins = $"<color=#ffd34d>{gold} зол.</color>";
-            string hearts = $"<color=#ff6b6b>{Mathf.Max(0, game.Reputation)} реп.</color>";
             string title = game.IsTutorial ? "ОБУЧЕНИЕ · ДЕНЬ 0"
                 : $"{game.Level.Title.ToUpper()} · НОЧЬ {Mathf.Min(game.Night, game.MaxNights)}/{game.MaxNights}";
-            statsText.text = $"{title}    {coins}    {hearts}";
+            statsText.text = title;
+
+            // Справа: сердца (полные и пустые до начального запаса) и золото рядом.
+            int rep = Mathf.Max(0, game.Reputation);
+            int maxRep = game.IsWander ? GameController.WanderMaxReputation : game.Level.StartReputation;
+            statHearts.Set(rep, Mathf.Max(0, maxRep - rep));
+            statGold.Set(gold.ToString());
+            float gap = 22;
+            var hr = statHearts.Root;
+            hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1, 0.5f);
+            hr.anchoredPosition = Vector2.zero;
+            var gr = statGold.Root;
+            gr.anchorMin = gr.anchorMax = gr.pivot = new Vector2(1, 0.5f);
+            gr.anchoredPosition = new Vector2(-(hr.sizeDelta.x + gap), 0);
+            float rightW = hr.sizeDelta.x + gap + gr.sizeDelta.x + 16;
+            statsRight.sizeDelta = new Vector2(rightW, statsRight.sizeDelta.y);
+            var off = statsText.rectTransform.offsetMax;
+            statsText.rectTransform.offsetMax = new Vector2(statsTextRight - rightW - 20, off.y);
         }
 
         void RefreshLog()

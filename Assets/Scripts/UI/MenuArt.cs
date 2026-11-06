@@ -114,7 +114,7 @@ namespace CardHome
 
         static Sprite Icon(string key, Func<Painter> paint) => Get(key, () => paint().Render(128));
 
-        public static Sprite Gear => Icon("Gear", () =>
+        public static Sprite Gear => UiArt.Icon("Gear") ?? Icon("Gear", () =>
         {
             var p = new Painter();
             for (int i = 0; i < 8; i++)
@@ -134,7 +134,7 @@ namespace CardHome
             .Poly(H("9aa6ad"), V(0, -0.55f), V(0.13f, 0), V(-0.13f, 0))
             .Circle(0, 0, 0.07f, H("2b2420"), false));
 
-        public static Sprite BackIcon => Icon("Back", () => new Painter()
+        public static Sprite BackIcon => UiArt.Icon("Back") ?? Icon("Back", () => new Painter()
             .Poly(H("6b4423"), V(0.35f, 0.6f), V(0.35f, -0.6f), V(-0.5f, 0)));
 
     }

@@ -22,6 +22,7 @@ namespace CardHome
         };
 
         GameObject root;
+        string artPath;
         RectTransform fill;
         CanvasGroup group;
 
@@ -41,11 +42,18 @@ namespace CardHome
             s.group = s.root.AddComponent<CanvasGroup>();
 
             var rt = (RectTransform)s.root.transform;
-            var sky = UIKit.Image("Sky", rt, Color.white, Sprites.NightBackground);
-            UIKit.Stretch(sky.rectTransform);
+            // Картинка экрана загрузки (Art/UI/Loading); надпись и полоса — в спокойной части неба:
+            // в вертикали — выше дома, в горизонтали — слева.
+            var art = UiArt.Loading(!portrait);
+            s.artPath = portrait ? "UI/Loading/Loading" : "UI/Loading/LoadingWide";
+            var under = UIKit.Image("Under", rt, RoomDatabase.Hex("141b33"));
+            UIKit.Stretch(under.rectTransform);
+            var sky = UIKit.Image("Sky", rt, Color.white, art != null ? art : Sprites.NightBackground);
+            if (art != null) UIKit.Cover(sky);
+            else UIKit.Stretch(sky.rectTransform);
 
             var rnd = new System.Random(7);
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < (art != null ? 0 : 30); i++)
             {
                 var star = UIKit.Image("Star", rt, new Color(1, 1, 0.9f, 0.85f), Sprites.Light);
                 star.raycastTarget = false;
@@ -56,7 +64,12 @@ namespace CardHome
             }
 
             var center = UIKit.Rect("Center", rt);
-            UIKit.Place(center, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 600));
+            var at = art == null ? new Vector2(0.5f, 0.5f) : portrait ? new Vector2(0.5f, 0.6f) : new Vector2(0.3f, 0.56f);
+            UIKit.Place(center, at, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 600));
+            // Тёмная плашка под надписями — читается поверх картинки.
+            var plate = UIKit.Image("Plate", center, new Color(1, 1, 1, 0.8f), UiArt.Plate);
+            plate.raycastTarget = false;
+            UIKit.Place(plate.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(940, 420));
 
             var t = UIKit.Outlined(UIKit.Text(center, title.ToUpper(), 64, TextAnchor.MiddleCenter, RoomDatabase.Hex("ffd34d"), FontStyle.Bold), 4);
             UIKit.Place(t.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 120), new Vector2(900, 120));
@@ -75,7 +88,7 @@ namespace CardHome
             s.fill.anchorMax = new Vector2(0, 1);
             s.fill.offsetMin = s.fill.offsetMax = Vector2.zero;
 
-            var tip = UIKit.Outlined(UIKit.Text(center, Tips[Random.Range(0, Tips.Length)], 30, TextAnchor.UpperCenter,
+            var tip = UIKit.Outlined(UIKit.Text(center, Tips[Random.Range(0, Tips.Length)], 36, TextAnchor.UpperCenter,
                 RoomDatabase.Hex("f7ecd2"), FontStyle.Normal), 2);
             UIKit.Place(tip.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -60), new Vector2(860, 160));
 
@@ -99,7 +112,12 @@ namespace CardHome
             fill.DOKill();
             fill.anchorMax = Vector2.one;
             group.blocksRaycasts = false;
-            group.DOFade(0, 0.3f).SetDelay(0.1f).SetLink(go).OnComplete(() => Object.Destroy(go));
+            string path = artPath;
+            group.DOFade(0, 0.3f).SetDelay(0.1f).SetLink(go).OnComplete(() =>
+            {
+                Object.Destroy(go);
+                ArtStore.Unload(path); // большой фон больше не нужен — освободить память
+            });
             root = null;
         }
     }

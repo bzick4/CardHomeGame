@@ -136,6 +136,24 @@ namespace CardHome
             public Text Label { get; set; }
             public string Title { get; init; }
             public Image Glow { get; set; }
+            public Image Icon { get; set; }
+        }
+
+        // Значок слева в кнопке меню (Art/UI/Icons); текст сдвигается вправо. null — убрать значок.
+        void SetMenuIcon(MenuBtn b, Sprite icon)
+        {
+            var rt = (RectTransform)b.Button.transform;
+            float h = rt.rect.height > 1 ? rt.rect.height : rt.sizeDelta.y;
+            if (b.Icon == null)
+            {
+                b.Icon = UIKit.Image("Icon", b.Body.transform, Color.white);
+                b.Icon.raycastTarget = false;
+                b.Icon.preserveAspect = true;
+                UIKit.Place(b.Icon.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(h * 0.28f, 4), Vector2.one * h * 0.68f);
+            }
+            b.Icon.sprite = icon;
+            b.Icon.enabled = icon != null;
+            b.Label.rectTransform.offsetMin = new Vector2(icon != null ? h * 0.95f : 6, b.Label.rectTransform.offsetMin.y);
         }
 
         MenuBtn MakeMenuButton(RectTransform parent, Color color, string title, Vector2 pos, Vector2 size, System.Action onClick)
@@ -193,16 +211,37 @@ namespace CardHome
             var box = UIKit.Rect("Window", parent);
             UIKit.Place(box, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, size);
             UIKit.DropShadow(box, new Vector2(0, -16), 0.55f);
-            var body = UIKit.Image("Body", box, DarkWood, Sprites.Panel);
-            UIKit.Stretch(body.rectTransform);
-            var paper = UIKit.Image("Paper", box, Cream, Sprites.Flat);
-            paper.raycastTarget = false;
-            paper.rectTransform.anchorMin = Vector2.zero;
-            paper.rectTransform.anchorMax = Vector2.one;
-            paper.rectTransform.offsetMin = new Vector2(24, 24);
-            paper.rectTransform.offsetMax = new Vector2(-24, -120);
-            var t = UIKit.Outlined(UIKit.Text(box, title, L.StatsFont + 10, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
-            UIKit.TopBand(t.rectTransform, 18, 96);
+            var window = UiArt.Window;
+            if (window != Sprites.Panel)
+            {
+                // Нарисованное окно: деревянная рама с пергаментом; заголовок — на красной ленте над верхним краем.
+                var body = UIKit.Image("Body", box, Color.white, window);
+                UIKit.Stretch(body.rectTransform);
+                float w = Mathf.Min(size.x * 0.86f, 700), h = w * 192f / 713f;
+                var ribbon = UIKit.Image("Title", box, Color.white, UiArt.WindowTitle);
+                ribbon.raycastTarget = false;
+                UIKit.Place(ribbon.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, h * 0.12f), new Vector2(w, h));
+                var t = UIKit.Outlined(UIKit.Text(ribbon.transform, title, L.StatsFont + 6, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
+                UIKit.Stretch(t.rectTransform, 12);
+                t.rectTransform.offsetMin = new Vector2(w * 0.2f, h * 0.22f);
+                t.rectTransform.offsetMax = new Vector2(-w * 0.2f, -h * 0.12f);
+                t.resizeTextForBestFit = true;
+                t.resizeTextMinSize = Fs(L.StatsFont - 10);
+                t.resizeTextMaxSize = L.StatsFont + 6;
+            }
+            else
+            {
+                var body = UIKit.Image("Body", box, DarkWood, Sprites.Panel);
+                UIKit.Stretch(body.rectTransform);
+                var paper = UIKit.Image("Paper", box, Cream, Sprites.Flat);
+                paper.raycastTarget = false;
+                paper.rectTransform.anchorMin = Vector2.zero;
+                paper.rectTransform.anchorMax = Vector2.one;
+                paper.rectTransform.offsetMin = new Vector2(24, 24);
+                paper.rectTransform.offsetMax = new Vector2(-24, -120);
+                var t = UIKit.Outlined(UIKit.Text(box, title, L.StatsFont + 10, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
+                UIKit.TopBand(t.rectTransform, 18, 96);
+            }
             return box;
         }
     }
