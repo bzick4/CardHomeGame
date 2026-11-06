@@ -586,7 +586,7 @@ namespace CardHome
         void Inspect(GuestDef g)
         {
             Clear(inspectContent);
-            var card = GuestCard.Create(inspectContent, g, true);
+            var card = GuestCard.Create(inspectContent, g, true, game.OpponentBack);
             card.Root.localScale = Vector3.one * 2.2f;
             card.Root.anchoredPosition = new Vector2(0, 80);
             Label(inspectContent, "Коснись, чтобы закрыть", L.BodyFont, Cream, -560, 60, 1000, FontStyle.Normal);

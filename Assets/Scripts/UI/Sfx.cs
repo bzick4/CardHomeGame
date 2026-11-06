@@ -14,7 +14,7 @@ namespace CardHome
         static readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
         static readonly System.Random noise = new System.Random(7);
 
-        public static bool Muted;
+        public static bool Muted { get; set; }
 
         public static void Step() => Play("Step", 0.35f, 0.12f, MakeStep);
         public static void Knock() => Play("Knock", 0.7f, 0.05f, MakeKnock);
@@ -28,7 +28,7 @@ namespace CardHome
         public static void Fanfare() => Play("Fanfare", 0.6f, 0, MakeFanfare);
         public static void Card() => Play("Card", 0.5f, 0.12f, MakeCard);
 
-        public static void Vibrate()
+        static void Vibrate()
         {
 #if UNITY_ANDROID || UNITY_IOS
             Handheld.Vibrate();

@@ -131,11 +131,11 @@ namespace CardHome
         // белый текст; пояснение — второй строкой помельче.
         class MenuBtn
         {
-            public Button Button;
-            public Image Body;
-            public Text Label;
-            public string Title;
-            public Image Glow;
+            public Button Button { get; set; }
+            public Image Body { get; set; }
+            public Text Label { get; set; }
+            public string Title { get; init; }
+            public Image Glow { get; set; }
         }
 
         MenuBtn MakeMenuButton(RectTransform parent, Color color, string title, Vector2 pos, Vector2 size, System.Action onClick)

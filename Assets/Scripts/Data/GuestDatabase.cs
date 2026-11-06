@@ -14,36 +14,39 @@ namespace CardHome
 
     public class GuestDef
     {
-        public string Id; // для файлов арта: Art/Guests/<Id>.png
-        public string Name;
-        public string Description;
-        public Color Color;
-        public GuestBehaviour Behaviour;
-        public int Stamina;     // сколько комнат (не коридоров) успеет обойти
-        public int Need;        // нужное настроение, чтобы остаться довольным
-        public bool Trappable;  // ловушка его ловит
-        public bool Ethereal;   // проходит ловушки насквозь
-        public bool HatesWarmth;
-        public RoomType SeekTarget;
-        public int CatchReward; // золото, если пойман
-        public int StealAmount; // сколько золота уносит, если дошёл
-        public Dictionary<RoomType, int> Likes = new Dictionary<RoomType, int>();
+        public string Id { get; init; } // для файлов арта: Art/Guests/<Id>.png
+        string name;
+        public string Name { get => name; init => name = value; }
+        public string Description { get; init; }
+        public Color Color { get; init; }
+        public GuestBehaviour Behaviour { get; init; }
+        public int Stamina { get; init; }     // сколько комнат (не коридоров) успеет обойти
+        int need;
+        public int Need { get => need; init => need = value; }        // нужное настроение, чтобы остаться довольным
+        public bool Trappable { get; init; }  // ловушка его ловит
+        public bool Ethereal { get; init; }   // проходит ловушки насквозь
+        public bool HatesWarmth { get; init; }
+        public RoomType SeekTarget { get; init; }
+        public int CatchReward { get; init; } // золото, если пойман
+        public int StealAmount { get; init; } // сколько золота уносит, если дошёл
+        public Dictionary<RoomType, int> Likes { get; } = new Dictionary<RoomType, int>();
 
         // Особые гости.
-        public bool Special;        // приходит редко, со своим правилом
-        public bool Boss;           // хозяин дома: только в последние ночи
-        public bool Romantic;       // спальня рядом с ванной: +2
-        public bool EdgeHater;      // злится на двери, ведущие за край дома
-        public int BreakChance;     // шанс сломать комнату даже довольным (%)
-        public int GoldMultiplier = 1;
-        public int UnhappyPenalty = 1; // сколько репутации снимает недовольный
+        public bool Special { get; init; }        // приходит редко, со своим правилом
+        public bool Boss { get; init; }           // хозяин дома: только в последние ночи
+        public bool Romantic { get; init; }       // спальня рядом с ванной: +2
+        public bool EdgeHater { get; init; }      // злится на двери, ведущие за край дома
+        public int BreakChance { get; init; }     // шанс сломать комнату даже довольным (%)
+        public int GoldMultiplier { get; init; } = 1;
+        int unhappyPenalty = 1;
+        public int UnhappyPenalty { get => unhappyPenalty; init => unhappyPenalty = value; } // сколько репутации снимает недовольный
 
         // Постоянные гости: довольный возвращается и платит больше.
-        public bool CanBecomeRegular;
-        public bool Regular;
-        public int RegularBonus;
+        public bool CanBecomeRegular { get; init; }
+        public bool Regular { get; private set; }
+        public int RegularBonus { get; private set; }
 
-        public int Tier;
+        int Tier { get; set; }
 
         public int Like(RoomType t) => Likes.TryGetValue(t, out var v) ? v : 0;
         public bool IsThreat => Behaviour == GuestBehaviour.Seeker;
@@ -55,7 +58,7 @@ namespace CardHome
             if (tier <= 0) return this;
             var g = (GuestDef)MemberwiseClone();
             g.Tier = tier;
-            if (!IsThreat) g.Need += tier;
+            if (!IsThreat) g.need += tier;
             return g;
         }
 
@@ -64,9 +67,9 @@ namespace CardHome
         {
             var g = (GuestDef)MemberwiseClone();
             g.Regular = true;
-            g.Name = "★ " + Name;
+            g.name = "★ " + Name;
             g.RegularBonus = 3;
-            g.UnhappyPenalty = 2;
+            g.unhappyPenalty = 2;
             return g;
         }
     }

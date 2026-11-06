@@ -8,12 +8,23 @@ namespace CardHome
     // Размеры элементов для одной ориентации экрана.
     public class Layout
     {
-        public bool Portrait;
-        public Vector2 ReferenceResolution;
-        public float MatchWidthOrHeight;
-        public float Cell, Step;
-        public float CardW, CardH, CardGap, MiniTile;
-        public int TileFont, CardNameFont, CardDescFont, StatsFont, BodyFont, LogFont, ButtonFont, LogLines;
+        public bool Portrait { get; private set; }
+        public Vector2 ReferenceResolution { get; init; }
+        public float MatchWidthOrHeight { get; init; }
+        public float Cell { get; private set; }
+        public float Step { get; private set; }
+        public float CardW { get; private set; }
+        public float CardH { get; private set; }
+        public float CardGap { get; private set; }
+        public float MiniTile { get; init; }
+        public int TileFont { get; private set; }
+        public int CardNameFont { get; init; }
+        public int CardDescFont { get; init; }
+        public int StatsFont { get; private set; }
+        public int BodyFont { get; private set; }
+        public int LogFont { get; init; }
+        public int ButtonFont { get; private set; }
+        public int LogLines { get; init; }
 
         // Основной режим: телефон вертикально. Ширина фиксирована, лишняя высота уходит в середину.
         public static readonly Layout PortraitLayout = new Layout
@@ -157,6 +168,18 @@ namespace CardHome
             Rebuild();
         }
 
+        // Картинки поля: Art/Board/<имя>.png (доска, пазы, стены, двери, крыльцо). Нет — рисуем кодом.
+        public static Sprite BoardArt(string name) => ArtStore.Get("Board/" + name, null);
+
+        // Фон текущего дома под ориентацию экрана. В меню не грузим — там свои фоны.
+        Sprite LocationArt()
+        {
+            if (!InGame(game.State)) return null;
+            string id = game.Level.House.Id;
+            return ArtStore.Get("Locations/" + id + (L.Portrait ? "" : "Wide"), null)
+                ?? ArtStore.Get("Locations/" + id + (L.Portrait ? "Wide" : ""), null);
+        }
+
         void Rebuild()
         {
             pendingRebuild = false;
@@ -178,9 +201,20 @@ namespace CardHome
             scaler.referenceResolution = L.ReferenceResolution;
             scaler.matchWidthOrHeight = L.MatchWidthOrHeight;
 
-            var day = UIKit.Image("DaySky", transform, Color.white, Sprites.DayBackground);
-            UIKit.Stretch(day.rectTransform);
-            BuildNightSky();
+            // Фон дома (Art/Locations/<Дом> или <Дом>Wide), если он есть; иначе — общее небо.
+            var location = LocationArt();
+            if (location != null)
+            {
+                var loc = UIKit.Image("Location", transform, Color.white, location);
+                loc.raycastTarget = false;
+                UIKit.Cover(loc);
+            }
+            else
+            {
+                var day = UIKit.Image("DaySky", transform, Color.white, Sprites.DayBackground);
+                UIKit.Stretch(day.rectTransform);
+            }
+            BuildNightSky(location != null);
 
             // Всё остальное — внутри безопасной зоны (без чёлки и полоски «домой»).
             root = UIKit.Rect("SafeArea", transform);
@@ -215,11 +249,27 @@ namespace CardHome
 
             // Деревянная доска под домом.
             var board = UIKit.Rect("Board", gridRoot);
-            UIKit.Place(board, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, BoardY), new Vector2(span + 44, span + 44));
-            UIKit.DropShadow(board, new Vector2(0, -14), 0.5f);
-            var boardBody = UIKit.Image("Wood", board, Wood, Sprites.Panel);
-            UIKit.Stretch(boardBody.rectTransform);
-            boardBody.raycastTarget = false;
+            var boardArt = BoardArt("Board");
+            if (boardArt != null)
+            {
+                // Нарисованная доска: сетка (плюс поля по 12) должна лечь на пол внутри рамки.
+                // Рамка картинки: ~8.3% по бокам, 6.7% сверху, 8.8% снизу (там порожек входа).
+                var size = BoardArtSize;
+                float shift = BoardShift * size.y; // середина пола выше середины картинки
+                UIKit.Place(board, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, BoardY - shift), size);
+                UIKit.DropShadow(board, new Vector2(0, -14), 0.45f);
+                var img = UIKit.Image("Art", board, Color.white, boardArt);
+                img.raycastTarget = false;
+                UIKit.Stretch(img.rectTransform);
+            }
+            else
+            {
+                UIKit.Place(board, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, BoardY), new Vector2(span + 44, span + 44));
+                UIKit.DropShadow(board, new Vector2(0, -14), 0.5f);
+                var boardBody = UIKit.Image("Wood", board, Wood, Sprites.Panel);
+                UIKit.Stretch(boardBody.rectTransform);
+                boardBody.raycastTarget = false;
+            }
 
             for (int x = 0; x < HouseGrid.Width; x++)
             for (int y = 0; y < HouseGrid.Height; y++)
@@ -322,8 +372,15 @@ namespace CardHome
             return bg.rectTransform;
         }
 
-        float GridHeight => L.Step * (HouseGrid.Width - 1) + L.Cell + 44 + 12 + GuestCard.H * PorchScale + 40;
-        float BoardY => GridHeight / 2 - (L.Step * (HouseGrid.Width - 1) + L.Cell + 44) / 2 - 10;
+        // Доска: сколько она занимает выше и ниже центра сетки. У нарисованной рамка снизу толще (порожек),
+        // поэтому середина пола чуть выше середины картинки.
+        const float BoardShift = (0.088f - 0.067f) / 2;
+        float Span => L.Step * (HouseGrid.Width - 1) + L.Cell;
+        Vector2 BoardArtSize => new Vector2((Span + 24) / (1 - 0.083f * 2), (Span + 24) / (1 - 0.067f - 0.088f));
+        float BoardAbove => BoardArt("Board") != null ? BoardArtSize.y * (0.5f + BoardShift) : (Span + 44) / 2;
+        float BoardBelow => BoardArt("Board") != null ? BoardArtSize.y * (0.5f - BoardShift) : (Span + 44) / 2;
+        float GridHeight => BoardAbove + BoardBelow + 12 + GuestCard.H * PorchScale + 40;
+        float BoardY => GridHeight / 2 - BoardAbove - 10;
 
         // Вертикально: сверху статус, подсказка и рука соперника; в центре дом с входом;
         // снизу журнал, рука с колодой справа и кнопки.
@@ -412,9 +469,9 @@ namespace CardHome
 
             UIKit.Place((RectTransform)menuButton.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(84, 76));
 
-            // Рука немного уходит за нижний край — при наведении и выборе карта поднимается целиком.
-            const float handPeek = 0.85f;
-            float handVisible = L.CardH * handPeek + 16;
+            // Рука видна целиком: снизу запас под рамку, которая выступает за край карты (48/420 высоты).
+            float handLift = L.CardH * 48f / 420f + 8;
+            float handVisible = L.CardH + handLift + 16;
             float safeH = 1080f * Screen.safeArea.height / Mathf.Max(1, Screen.height);
             float fit = Mathf.Clamp((safeH - 20 - handVisible) / GridHeight, 0.4f, 1f);
 
@@ -425,7 +482,7 @@ namespace CardHome
             gridRoot.localScale = Vector3.one * fit;
 
             handRoot.SetParent(main, false);
-            UIKit.Place(handRoot, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-70, -L.CardH * (1 - handPeek)), handRoot.sizeDelta);
+            UIKit.Place(handRoot, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-70, handLift), handRoot.sizeDelta);
             pileRoot.SetParent(main, false);
             UIKit.Place(pileRoot, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 12), pileRoot.sizeDelta);
         }
@@ -488,7 +545,7 @@ namespace CardHome
             if (phase == Phase.GameOver && !game.Won) Sfx.Break();
         }
 
-        public void Refresh()
+        void Refresh()
         {
             if (game == null) return;
             var state = game.State;
@@ -615,8 +672,8 @@ namespace CardHome
         // Без логики нажатий — её добавляют рука (HandCard) или экраны выбора (Button).
         CardParts BuildCardVisual(Transform parent, RoomDef def, Doors doors, int level = 1)
         {
-            var face = Icons.RoomCard(def.Type);
-            if (face != null) return BuildPaintedCard(parent, def, doors, level, face);
+            var roomArt = Icons.RoomArt(def.Type);
+            if (roomArt != null) return BuildRoomCard(parent, def, doors, level, roomArt);
 
             var card = UIKit.Rect("Card", parent);
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
@@ -684,69 +741,82 @@ namespace CardHome
             return new CardParts { Root = card, Frame = frame, Glow = glow, Tile = tile, Def = def, Level = level };
         }
 
-        // Карта из нарисованного бланка (Art/RoomCards/<Тип>.png): рамка, окно с картинкой, лента и пергамент
-        // уже нарисованы; поверх игра пишет название и описание, а в углу окна — маленькая плитка со схемой дверей
-        // (она поворачивается вместе с картой). Бланк вписывается в размер карты без искажений.
-        CardParts BuildPaintedCard(Transform parent, RoomDef def, Doors doors, int level, Sprite face)
+        // Карта комнаты из слоёв, в координатах лица 300×420 (от левого верхнего угла):
+        // арт комнаты сверху, пергамент снизу, красная лента с названием на стыке, схема дверей в углу арта,
+        // поверх всего — рамка круга улучшения (Art/Frames), та же, что у рубашек.
+        CardParts BuildRoomCard(Transform parent, RoomDef def, Doors doors, int level, Sprite art)
         {
             var card = UIKit.Rect("Card", parent);
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
             card.pivot = new Vector2(0.5f, 0);
             card.sizeDelta = new Vector2(L.CardW, L.CardH);
 
-            // Область самого бланка — с его пропорциями, по центру карты.
             var area = UIKit.Rect("Face", card);
             UIKit.Stretch(area);
             var fit = area.gameObject.AddComponent<AspectRatioFitter>();
             fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fit.aspectRatio = face.rect.width / face.rect.height;
+            fit.aspectRatio = FaceW / FaceH;
+            // Сколько единиц интерфейса в одной единице лица — для шрифтов и рамок пергамента.
+            float k = Mathf.Min(L.CardH, L.CardW * FaceH / FaceW) / FaceH;
 
             var glow = UIKit.Image("Glow", area, new Color(1, 0.85f, 0.2f, 0.95f), Sprites.Shadow);
             glow.raycastTarget = false;
-            UIKit.Stretch(glow.rectTransform, -Sprites.ShadowPad - 10);
+            UIKit.Stretch(glow.rectTransform, -Sprites.ShadowPad - 30 * k);
             glow.enabled = false;
-
             UIKit.DropShadow(area, new Vector2(4, -12), 0.5f);
-            var frame = UIKit.Image("Frame", area, Color.white, face);
-            UIKit.Stretch(frame.rectTransform);
 
-            // Отметки на бланке (в долях высоты снизу): лента ~44–52%, пергамент ~13–41%, окно ~55–92%.
-            var name = UIKit.Outlined(UIKit.Text(area, def.Name.ToUpper(), L.CardNameFont, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
-            Band(name.rectTransform, 0.12f, 0.445f, 0.88f, 0.53f);
+            // Подложка: у арта прозрачные углы, под ними не должно просвечивать поле.
+            // Она же ловит нажатия по всей карте (остальные слои касаний не ловят).
+            // Всё содержимое сжато на FaceInset внутрь: у рамок планки начинаются чуть внутри края карты,
+            // и без отступа картинка выглядывала бы над рамкой.
+            var bg = UIKit.Image("Bg", area, RoomDatabase.Hex("2a1f1a"), Sprites.Flat);
+            FacePx(bg.rectTransform, FaceInset, FaceInset, FaceW - FaceInset, FaceH - FaceInset);
+
+            var pic = UIKit.Image("Art", area, Color.white, art);
+            pic.raycastTarget = false;
+            FacePx(pic.rectTransform, FaceInset, FaceInset, FaceW - FaceInset, 300);
+
+            var panelSprite = Icons.TextPanel;
+            var panel = UIKit.Image("Panel", area, panelSprite != null ? Color.white : Cream, panelSprite != null ? panelSprite : Sprites.Flat);
+            panel.raycastTarget = false;
+            if (panelSprite != null) panel.pixelsPerUnitMultiplier = 1 / k; // края пергамента в масштабе карты
+            FacePx(panel.rectTransform, FaceInset, 256, FaceW - FaceInset, FaceH - FaceInset);
+
+            var ribbonEdge = UIKit.Image("RibbonEdge", area, RoomDatabase.Hex("d9a441"), Sprites.Flat);
+            ribbonEdge.raycastTarget = false;
+            FacePx(ribbonEdge.rectTransform, 10, 234, 290, 276);
+            var ribbon = UIKit.Image("Ribbon", area, RoomDatabase.Hex("7a2418"), Sprites.Flat);
+            ribbon.raycastTarget = false;
+            FacePx(ribbon.rectTransform, 13, 237, 287, 273);
+            string title = level > 1 ? $"{def.Name} {HouseDatabase.Roman(level)}" : def.Name;
+            var name = UIKit.Outlined(UIKit.Text(area, title, Mathf.RoundToInt(22 * k), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+            FacePx(name.rectTransform, 22, 236, 278, 274);
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = L.CardNameFont / 2;
-            name.resizeTextMaxSize = L.CardNameFont;
+            name.resizeTextMinSize = Mathf.Max(8, Mathf.RoundToInt(12 * k));
+            name.resizeTextMaxSize = Mathf.RoundToInt(22 * k);
 
-            var desc = UIKit.Text(area, def.Description, L.CardDescFont, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
-            Band(desc.rectTransform, 0.17f, 0.15f, 0.83f, 0.40f);
+            // Описание — в безопасной зоне пергамента: ~30 от боков и ~60 от низа (там камни богатых рамок).
+            var desc = UIKit.Text(area, def.Description, Mathf.RoundToInt(17 * k), TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+            FacePx(desc.rectTransform, 30, 280, 270, 360);
             desc.resizeTextForBestFit = true;
-            desc.resizeTextMinSize = L.CardDescFont - 7;
-            desc.resizeTextMaxSize = L.CardDescFont;
+            desc.resizeTextMinSize = Mathf.Max(7, Mathf.RoundToInt(10 * k));
+            desc.resizeTextMaxSize = Mathf.RoundToInt(17 * k);
 
-            // Схема дверей — маленькая плитка в правом верхнем углу окна.
-            float tileSize = L.MiniTile * 0.5f;
-            var tile = new TileView(area, tileSize, 0, false, showLabel: false);
-            tile.Root.anchorMin = tile.Root.anchorMax = new Vector2(0.84f, 0.89f);
-            tile.Root.pivot = new Vector2(1, 1);
-            tile.Root.anchoredPosition = Vector2.zero;
-            tile.SetRoom(def, doors, false, level);
+            var scheme = new DoorScheme(area, 48 * k);
+            scheme.Root.anchorMin = scheme.Root.anchorMax = new Vector2(214 / FaceW, 1 - 94 / FaceH);
+            scheme.Root.anchoredPosition = Vector2.zero;
+            scheme.Set(doors);
 
-            // Улучшенная карта — в металлической рамке, как у рубашек.
-            if (level >= 2)
-            {
-                int tier = Card.FrameTier(level);
-                var metal = UIKit.Image("Metal", area, Color.white, CardBacks.FrameSprite(tier));
-                metal.raycastTarget = false;
-                UIKit.Stretch(metal.rectTransform);
-                var extra = new Vector2(L.CardW, L.CardH) * 0.07f;
-                metal.rectTransform.offsetMin = -extra;
-                metal.rectTransform.offsetMax = extra;
-                var tag = UIKit.Outlined(UIKit.Text(area, Card.LevelName(level).ToUpper(), L.CardDescFont - 2, TextAnchor.MiddleCenter,
-                    CardBacks.Tiers[tier].Gem, FontStyle.Bold), 2);
-                Band(tag.rectTransform, 0.1f, 0.0f, 0.9f, 0.1f);
-            }
-            return new CardParts { Root = card, Frame = frame, Glow = glow, Tile = tile, Def = def, Level = level, Painted = true };
+            CardBacks.AddFrame(area, Card.FrameTier(level));
+
+            return new CardParts { Root = card, Frame = pic, Glow = glow, Def = def, Level = level, Painted = true, Scheme = scheme };
         }
+
+        const float FaceW = 300, FaceH = 420, FaceInset = 8;
+
+        // Прямоугольник на лице карты в «пикселях» 300×420 от левого верхнего угла.
+        static void FacePx(RectTransform rt, float x0, float y0, float x1, float y1) =>
+            Band(rt, x0 / FaceW, 1 - y1 / FaceH, x1 / FaceW, 1 - y0 / FaceH);
 
         // Растянуть элемент на прямоугольник бланка, заданный долями (лево, низ, право, верх).
         static void Band(RectTransform rt, float x0, float y0, float x1, float y1)
@@ -759,7 +829,7 @@ namespace CardHome
         // ───────────── Перетаскивание карты на поле ─────────────
 
         TileView dragGhost;
-        Image dragRing;
+        Image dragRing, dragFx;
         Vector2Int? dragCell;
 
         // «Призрак» комнаты: показывает, куда и как встанет карта, пока её тянут над доской.
@@ -768,6 +838,13 @@ namespace CardHome
             dragGhost = new TileView(gridRoot, L.Cell, L.TileFont, false);
             dragGhost.Root.gameObject.AddComponent<CanvasGroup>().alpha = 0.85f;
             dragGhost.Root.GetComponent<CanvasGroup>().blocksRaycasts = false;
+            // Подсветка клетки (Art/Fx/TileOk|TileBad) — под призраком комнаты.
+            dragFx = UIKit.Image("Highlight", dragGhost.Root, Color.white);
+            dragFx.raycastTarget = false;
+            dragFx.preserveAspect = true;
+            UIKit.Place(dragFx.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.one * L.Cell * 1.45f);
+            dragFx.transform.SetAsFirstSibling();
+            dragFx.enabled = false;
             dragRing = UIKit.Image("Ring", dragGhost.Root, Good, Sprites.Frame);
             dragRing.raycastTarget = false;
             UIKit.Stretch(dragRing.rectTransform, -10);
@@ -817,6 +894,9 @@ namespace CardHome
             if (room != null && ok) dragGhost.SetRoom(card.Def, room.Doors, false, Mathf.Min(HouseGrid.MaxLevel, room.Level + card.Level), false, true);
             else dragGhost.SetRoom(card.Def, game.SelectedDoors, false, card.Level);
             dragRing.color = ok ? Good : Bad;
+            var highlight = FxArt(ok ? "TileOk" : "TileBad");
+            dragFx.sprite = highlight;
+            dragFx.enabled = highlight != null;
 
             ghost.gameObject.SetActive(true);
             ghost.SetAsLastSibling();
@@ -861,11 +941,15 @@ namespace CardHome
             rt.localScale = Vector3.one * 1.45f;
             rt.DOScale(1, 0.4f).SetEase(Ease.OutBack, 3f).SetLink(rt.gameObject);
             Sfx.Plop();
+            // Улучшенная комната — с искрами.
+            var room = game.Grid.Get(p);
+            if (room != null && room.Level > 1) Burst(gridRoot, "Sparkles", CellPos(p), L.Cell * 1.2f, 0.25f, 1.1f);
         }
 
         void AnimateBroken(Vector2Int p)
         {
             tiles[p.x, p.y].PlayBreak();
+            Burst(gridRoot, "Dust", CellPos(p), L.Cell * 1.2f, 0.15f);
             Sfx.Break();
         }
     }

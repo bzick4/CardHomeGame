@@ -10,17 +10,20 @@ namespace CardHome
     // Части одной карты, чтобы менять её состояние без пересоздания.
     public class CardParts
     {
-        public RectTransform Root;
-        public Image Frame;
-        public Image Glow;
-        public TileView Tile;
-        public RoomDef Def;
-        public int Level = 1;
-        public bool Painted; // карта из нарисованного бланка (Art/RoomCards) — её не красим цветом комнаты
+        public RectTransform Root { get; init; }
+        public Image Frame { get; init; }
+        public Image Glow { get; init; }
+        public TileView Tile { get; init; }     // плитка с дверями (старые карты)
+        public DoorScheme Scheme { get; init; } // схема дверей в углу (карта с артом RoomArt)
+        public RoomDef Def { get; init; }
+        public int Level { get; init; } = 1;
+        public bool Painted { get; init; } // карта с артом (RoomArt) — её не красим цветом комнаты
     }
 
-    // Рука карт веером, как в cityIdle: дуга с наклоном, раздача снизу по очереди,
+    // Рука карт веером: дуга с наклоном, раздача снизу по очереди,
     // карта под пальцем приподнимается, при нажатии — ещё выше и ровно, отпустил — пружинит обратно.
+    // Повёл пальцем вбок — карты волной следуют за ним, отпустил — выбрана карта под пальцем;
+    // повёл вверх — карта берётся и несётся на поле.
     // Без Update: всё на событиях указателя и DOTween.
     public class HandView
     {
@@ -37,13 +40,13 @@ namespace CardHome
         public event Action<int> CardTapped;
 
         // Откуда вылетают новые карты (обычно — из колоды справа). null — снизу экрана.
-        public Func<Vector2?> DealOrigin;
+        public Func<Vector2?> DealOrigin { get; internal set; }
 
         // Перетаскивание карты на поле: начало, движение (экранная точка) и бросок.
         // Dropped возвращает true, если карту сыграли — тогда она не возвращается в руку.
-        public Action<int> DragBegan;
-        public Action<int, Vector2> Dragging;
-        public Func<int, Vector2, bool> Dropped;
+        public Action<int> DragBegan { get; internal set; }
+        public Action<int, Vector2> Dragging { get; internal set; }
+        public Func<int, Vector2, bool> Dropped { get; internal set; }
         public bool IsDragging { get; internal set; }
 
         // Над доской карта прячется — вместо неё виден «призрак» комнаты.
@@ -69,7 +72,7 @@ namespace CardHome
         // Привести руку к состоянию игры. Сравнивает с тем, что уже лежит на столе:
         // то же самое — только обновить выбор; одна карта пропала — она улетает, остальные съезжаются;
         // иначе — новая раздача.
-        public void Sync(IList<Card> hand, int selected, Doors selectedDoors, bool interactable)
+        public void Sync(IReadOnlyList<Card> hand, int selected, Doors selectedDoors, bool interactable)
         {
             if (!SameTypes(hand))
             {
@@ -107,6 +110,73 @@ namespace CardHome
 
         internal void Tap(int index) => CardTapped?.Invoke(index);
 
+        // ───── Просмотр руки пальцем ─────
+        // Ведёшь пальцем вдоль руки — карты волной поднимаются за ним; отпустил — выбрана карта под пальцем;
+        // увёл палец вверх над рукой — эту карту берёшь и несёшь на поле.
+
+        // Дробный номер карты под пальцем (null — просмотра нет). По нему каждая карта считает свою «волну».
+        internal float? Focus { get; private set; }
+        int FocusIndex => Focus.HasValue ? Mathf.Clamp(Mathf.RoundToInt(Focus.Value), 0, cards.Count - 1) : -1;
+        internal float CardWidth => cardW;
+
+        // Палец в координатах руки.
+        Vector2 Local(PointerEventData e)
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(root, e.position, e.pressEventCamera, out var p);
+            return p;
+        }
+
+        // Палец ушёл выше карт — пора брать карту на поле.
+        internal bool AboveHand(PointerEventData e) => Local(e).y > -root.rect.height / 2 + cardH * 1.25f;
+
+        // Обновить положение пальца: какая карта под ним (дробно — для плавной волны).
+        internal void Browse(PointerEventData e)
+        {
+            if (cards.Count == 0) return;
+            float x = Local(e).x;
+            float f = 0;
+            if (cards.Count > 1)
+            {
+                float step = cards[1].BaseX - cards[0].BaseX;
+                f = step > 0.01f ? (x - cards[0].BaseX) / step : 0;
+            }
+            f = Mathf.Clamp(f, 0, cards.Count - 1);
+            int before = FocusIndex;
+            Focus = f;
+            if (FocusIndex != before)
+            {
+                SortSiblings();
+                Sfx.Click();
+            }
+            foreach (var c in cards) c.ApplyPose(0.12f, smooth: true);
+        }
+
+        // Палец отпущен над рукой — выбрать карту под ним, волна опадает.
+        internal void EndBrowse(bool select)
+        {
+            int index = FocusIndex;
+            Focus = null;
+            SortSiblings();
+            foreach (var c in cards) c.ApplyPose(0.2f);
+            if (select && index >= 0 && cards[index].Interactable) Tap(index);
+        }
+
+        // Палец ушёл вверх — перетаскивание переходит к карте под пальцем.
+        internal void TakeFromBrowse(PointerEventData e)
+        {
+            int index = FocusIndex;
+            Focus = null;
+            foreach (var c in cards) c.ApplyPose(0.15f);
+            if (index < 0 || !cards[index].Interactable)
+            {
+                SortSiblings();
+                return;
+            }
+            var card = cards[index];
+            e.pointerDrag = card.gameObject; // дальше события перетаскивания получает она
+            card.BeginTake(e);
+        }
+
         // Карта в руке — для подсветки в обучении.
         public RectTransform CardRect(int index) => index >= 0 && index < cards.Count ? cards[index].Rt : null;
 
@@ -116,6 +186,8 @@ namespace CardHome
             for (int i = 0; i < cards.Count; i++) cards[i].transform.SetSiblingIndex(i);
             foreach (var c in cards)
                 if (c.IsUp) c.transform.SetAsLastSibling();
+            int f = FocusIndex;
+            if (f >= 0) cards[f].transform.SetAsLastSibling();
         }
 
         void AddCard(Card c)
@@ -126,7 +198,7 @@ namespace CardHome
             cards.Add(card);
         }
 
-        bool IsPrefix(IList<Card> hand)
+        bool IsPrefix(IReadOnlyList<Card> hand)
         {
             if (hand.Count <= cards.Count) return false;
             for (int i = 0; i < cards.Count; i++)
@@ -134,7 +206,7 @@ namespace CardHome
             return true;
         }
 
-        bool SameTypes(IList<Card> hand)
+        bool SameTypes(IReadOnlyList<Card> hand)
         {
             if (hand.Count != cards.Count) return false;
             for (int i = 0; i < hand.Count; i++)
@@ -142,7 +214,7 @@ namespace CardHome
             return true;
         }
 
-        int FindRemoved(IList<Card> hand)
+        int FindRemoved(IReadOnlyList<Card> hand)
         {
             if (cards.Count != hand.Count + 1) return -1;
             for (int skip = 0; skip < cards.Count; skip++)
@@ -237,15 +309,16 @@ namespace CardHome
         public CardParts Parts { get; private set; }
         public RectTransform Rt { get; private set; }
         public CanvasGroup Group { get; private set; }
-        public int Index;
+        public int Index { get; internal set; }
         public float BaseX { get; private set; }
         public float BaseY { get; private set; }
         public float BaseRot { get; private set; }
         public bool IsUp => hover || pressed || selected;
+        public bool Interactable => interactable;
 
         HandView owner;
         float lift;
-        bool hover, pressed, selected, dragging, interactable = true;
+        bool hover, pressed, selected, dragging, browsing, interactable = true;
         Vector2 grabOffset;
         Sequence tween;
         Vector3 lastPose = new Vector3(float.NaN, 0, 0);
@@ -275,7 +348,8 @@ namespace CardHome
 
         public void SetState(bool isSelected, Doors doors, bool canInteract)
         {
-            Parts.Tile.SetRoom(Parts.Def, doors, false, Parts.Level);
+            Parts.Tile?.SetRoom(Parts.Def, doors, false, Parts.Level);
+            Parts.Scheme?.Set(doors);
             var baseColor = Parts.Painted ? Color.white : Parts.Def.Color;
             Parts.Frame.color = canInteract ? baseColor : baseColor * new Color(0.75f, 0.75f, 0.75f, 1);
 
@@ -303,24 +377,36 @@ namespace CardHome
         // Куда должна встать карта в текущем состоянии.
         Vector3 Pose()
         {
+            if (owner.Focus.HasValue)
+            {
+                // Волна: карта под пальцем выше всех и ровно, соседи — чуть ниже и расступаются.
+                float d = Index - owner.Focus.Value;
+                float w = Mathf.Clamp01(1 - Mathf.Abs(d) / 1.8f);
+                w = w * w * (3 - 2 * w);
+                float push = Mathf.Clamp(d, -1.5f, 1.5f) * owner.CardWidth * 0.12f * (1 - Mathf.Abs(Mathf.Clamp(d, -1, 1)) * 0.3f);
+                return new Vector3(BaseX + push, BaseY + lift * 1.5f * w, BaseRot * (1 - w));
+            }
             if (pressed) return new Vector3(BaseX, BaseY + lift * 1.4f, 0);
             if (hover || selected) return new Vector3(BaseX, BaseY + lift, BaseRot * 0.4f);
             return new Vector3(BaseX, BaseY, BaseRot);
         }
 
-        public void ApplyPose(float duration, float delay = 0, bool force = false)
+        // smooth — для частых обновлений (просмотр пальцем): без «пружины», иначе карты дрожат.
+        public void ApplyPose(float duration, float delay = 0, bool force = false, bool smooth = false)
         {
             if (dragging) return; // карту держит палец
             var pose = Pose();
             if (!force && pose == lastPose) return;
             lastPose = pose;
 
+            var ease = smooth ? Ease.OutQuad : Ease.OutBack;
+            float focusScale = owner.Focus.HasValue ? 1 + 0.08f * Mathf.Clamp01(1 - Mathf.Abs(Index - owner.Focus.Value) / 1.8f) : 1;
             tween?.Kill();
             tween = DOTween.Sequence().SetLink(gameObject);
             if (delay > 0) tween.AppendInterval(delay);
-            tween.Append(Rt.DOAnchorPos(new Vector2(pose.x, pose.y), duration).SetEase(Ease.OutBack))
-                 .Join(Rt.DOLocalRotate(new Vector3(0, 0, pose.z), duration).SetEase(Ease.OutBack))
-                 .Join(Rt.DOScale(selected ? 1.05f : 1f, duration).SetEase(Ease.OutBack));
+            tween.Append(Rt.DOAnchorPos(new Vector2(pose.x, pose.y), duration).SetEase(ease))
+                 .Join(Rt.DOLocalRotate(new Vector3(0, 0, pose.z), duration).SetEase(ease))
+                 .Join(Rt.DOScale((selected ? 1.05f : 1f) * focusScale, duration).SetEase(ease));
         }
 
         public void Kill() => tween?.Kill();
@@ -364,13 +450,24 @@ namespace CardHome
 
         // ───── Перетаскивание на поле ─────
 
+        // Куда повёл палец: вверх — берём карту на поле, вбок — просматриваем руку волной.
         public void OnBeginDrag(PointerEventData e)
         {
-            if (!interactable)
+            var move = e.position - e.pressPosition;
+            if (Mathf.Abs(move.x) > Mathf.Abs(move.y) || move.y < 0 || !interactable)
             {
-                e.pointerDrag = null;
+                browsing = true;
+                pressed = hover = false;
+                owner.Browse(e);
                 return;
             }
+            BeginTake(e);
+        }
+
+        // Взять карту и нести её на поле.
+        internal void BeginTake(PointerEventData e)
+        {
+            browsing = false;
             dragging = true;
             owner.IsDragging = true;
             pressed = hover = false;
@@ -388,6 +485,16 @@ namespace CardHome
 
         public void OnDrag(PointerEventData e)
         {
+            if (browsing)
+            {
+                if (owner.AboveHand(e))
+                {
+                    browsing = false;
+                    owner.TakeFromBrowse(e);
+                }
+                else owner.Browse(e);
+                return;
+            }
             if (!dragging) return;
             RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)Rt.parent, e.position, e.pressEventCamera, out var local);
             // Карта догоняет палец, держась за то место, где её взяли (смещение плавно уходит).
@@ -398,6 +505,12 @@ namespace CardHome
 
         public void OnEndDrag(PointerEventData e)
         {
+            if (browsing)
+            {
+                browsing = false;
+                owner.EndBrowse(select: true);
+                return;
+            }
             if (!dragging) return;
             dragging = false;
             owner.IsDragging = false;

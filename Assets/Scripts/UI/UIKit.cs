@@ -150,7 +150,7 @@ namespace CardHome
     // Кнопка чуть сжимается под пальцем и пружинит обратно.
     public class PressScale : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
-        public float Pressed = 0.92f;
+        public float Pressed { get; set; } = 0.92f;
         Selectable selectable;
         Vector3 baseScale;
         bool down;

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace CardHome
 {
@@ -7,6 +8,8 @@ namespace CardHome
     // Сменить шрифт: выбери Assets/Resources/GameFont и перетащи другой .ttf в поле Font.
     public class GameFont : ScriptableObject
     {
-        public Font Font;
+        // Имя «Font» в ассете сохраняется, поэтому старая ссылка на шрифт не теряется.
+        [SerializeField, FormerlySerializedAs("Font")] Font font = null;
+        public Font Font => font;
     }
 }

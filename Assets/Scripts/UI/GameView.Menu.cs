@@ -244,6 +244,7 @@ namespace CardHome
 
         RectTransform levelsMap, levelsTabs;
         Text levelsTitle;
+        Vector2[] campaignPoints; // точки домов на картинке кампании (доли), null — свиток
 
         void BuildLevelSelect()
         {
@@ -263,18 +264,42 @@ namespace CardHome
             levelsTabs = UIKit.Rect("Tabs", levelsContent);
             UIKit.Place(levelsTabs, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 745), new Vector2(900, 80));
 
-            // Свиток: два деревянных валика и карта между ними.
-            levelsMap = UIKit.Rect("Map", levelsContent);
-            UIKit.Place(levelsMap, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(940, 1240));
-            UIKit.DropShadow(levelsMap, new Vector2(0, -14), 0.5f);
-            var paper = UIKit.Image("Paper", levelsMap, Color.white, GuestArt.MapPaper);
-            paper.raycastTarget = false;
-            UIKit.Stretch(paper.rectTransform);
-            Roller(levelsContent, 650);
-            Roller(levelsContent, -650);
+            // Своя карта королевства (Art/Map/Campaign) — на весь экран, вписана целиком; дома стоят в её точках.
+            // Нет картинки — прежний свиток с валиками.
+            bool wide = !L.Portrait;
+            var campaign = MenuArt.Campaign(wide);
+            if (campaign == null) { wide = !wide; campaign = MenuArt.Campaign(wide); }
+            campaignPoints = campaign != null ? CampaignPoints.For(!wide) : null;
+            if (campaign != null)
+            {
+                var area = UIKit.Rect("Campaign", levelsRoot);
+                area.SetSiblingIndex(levelsContent.GetSiblingIndex()); // над фоном меню, под интерфейсом
+                UIKit.Stretch(area);
+                var art = UIKit.Image("Art", area, Color.white, campaign);
+                art.raycastTarget = false;
+                UIKit.Stretch(art.rectTransform);
+                var fit = art.gameObject.AddComponent<AspectRatioFitter>();
+                fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+                fit.aspectRatio = campaign.rect.width / campaign.rect.height;
+                levelsMap = art.rectTransform;
+                levelsGrid = UIKit.Rect("Nodes", levelsMap);
+                UIKit.Stretch(levelsGrid);
+            }
+            else
+            {
+                // Свиток: два деревянных валика и карта между ними.
+                levelsMap = UIKit.Rect("Map", levelsContent);
+                UIKit.Place(levelsMap, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(940, 1240));
+                UIKit.DropShadow(levelsMap, new Vector2(0, -14), 0.5f);
+                var paper = UIKit.Image("Paper", levelsMap, Color.white, GuestArt.MapPaper);
+                paper.raycastTarget = false;
+                UIKit.Stretch(paper.rectTransform);
+                Roller(levelsContent, 650);
+                Roller(levelsContent, -650);
 
-            levelsGrid = UIKit.Rect("Nodes", levelsMap);
-            UIKit.Stretch(levelsGrid);
+                levelsGrid = UIKit.Rect("Nodes", levelsMap);
+                UIKit.Stretch(levelsGrid);
+            }
 
             levelsInfo = Label(levelsContent, "", L.BodyFont, Cream, -770, 90, 1000, FontStyle.Bold);
         }
@@ -332,23 +357,32 @@ namespace CardHome
             }
 
             Clear(levelsGrid);
-            // Тропа: точками между домами; пройденная часть — золотая.
-            for (int i = 0; i < MapNodes.Length - 1; i++)
+            if (campaignPoints != null)
             {
-                int index = levelsTier * HouseDatabase.Count + i;
-                bool done = progress.StarsAt(index) > 0;
-                var a = MapNodes[i];
-                var b = MapNodes[i + 1];
-                int n = Mathf.Max(2, Mathf.RoundToInt((b - a).magnitude / 34));
-                for (int k = 1; k < n; k++)
-                {
-                    var dot = UIKit.Image("Dot", levelsGrid, done ? RoomDatabase.Hex("ffcf3a") : new Color(0.55f, 0.4f, 0.25f, 0.55f), Sprites.Circle);
-                    dot.raycastTarget = false;
-                    UIKit.Place(dot.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.Lerp(a, b, k / (float)n), Vector2.one * (done ? 22 : 16));
-                }
+                // Дорога уже нарисована на карте — ставим только дома в её точках.
+                for (int i = 0; i < HouseDatabase.Count; i++)
+                    CampaignNode(levelsGrid, HouseDatabase.Level(levelsTier * HouseDatabase.Count + i), campaignPoints[i]);
             }
-            for (int i = 0; i < HouseDatabase.Count; i++)
-                MapNode(levelsGrid, HouseDatabase.Level(levelsTier * HouseDatabase.Count + i), MapNodes[i]);
+            else
+            {
+                // Тропа: точками между домами; пройденная часть — золотая.
+                for (int i = 0; i < MapNodes.Length - 1; i++)
+                {
+                    int index = levelsTier * HouseDatabase.Count + i;
+                    bool done = progress.StarsAt(index) > 0;
+                    var a = MapNodes[i];
+                    var b = MapNodes[i + 1];
+                    int n = Mathf.Max(2, Mathf.RoundToInt((b - a).magnitude / 34));
+                    for (int k = 1; k < n; k++)
+                    {
+                        var dot = UIKit.Image("Dot", levelsGrid, done ? RoomDatabase.Hex("ffcf3a") : new Color(0.55f, 0.4f, 0.25f, 0.55f), Sprites.Circle);
+                        dot.raycastTarget = false;
+                        UIKit.Place(dot.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.Lerp(a, b, k / (float)n), Vector2.one * (done ? 22 : 16));
+                    }
+                }
+                for (int i = 0; i < HouseDatabase.Count; i++)
+                    MapNode(levelsGrid, HouseDatabase.Level(levelsTier * HouseDatabase.Count + i), MapNodes[i]);
+            }
 
             string heir = progress.Heirlooms.Count > 0
                 ? string.Join(", ", progress.Heirlooms.Select(t => RoomDatabase.Get((RoomType)t).Name))
@@ -379,13 +413,7 @@ namespace CardHome
             var shadow = UIKit.Image("Shadow", node, new Color(0, 0, 0, 0.3f), Sprites.ShadowCircle);
             shadow.raycastTarget = false;
             UIKit.Place(shadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(150, 60));
-            var disc = UIKit.Image("Base", node, unlocked ? level.House.Color : new Color(0.5f, 0.45f, 0.4f), Sprites.Circle);
-            disc.raycastTarget = false;
-            UIKit.Place(disc.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(124, 124));
-            var icon = UIKit.Image("Icon", disc.transform, Color.white, Icons.House(level.House));
-            icon.raycastTarget = false;
-            icon.preserveAspect = true;
-            UIKit.Stretch(icon.rectTransform, 16);
+            HouseDisc(node, level.House, unlocked, new Vector2(0, 40), 124);
 
             var plaque = UIKit.Image("Plaque", node, DarkWood, Sprites.Panel);
             plaque.raycastTarget = false;
@@ -460,6 +488,147 @@ namespace CardHome
             {
                 Sfx.Click();
                 // Если в этом доме есть начатый день — продолжаем его, иначе начинаем дом заново.
+                if (game.SavedLevel == index) game?.ContinueRun();
+                else game?.StartLevel(index);
+            });
+            node.gameObject.AddComponent<PressScale>().Pressed = 0.93f;
+        }
+
+        // Картинка дома в круглом окне внутри цветного кольца: заполняет круг, лишнее обрезается.
+        void HouseDisc(Transform parent, HouseDef house, bool unlocked, Vector2 pos, float size)
+        {
+            var disc = UIKit.Image("Base", parent, unlocked ? house.Color : new Color(0.5f, 0.45f, 0.4f), Sprites.Circle);
+            disc.raycastTarget = false;
+            UIKit.Place(disc.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(size, size));
+            var window = UIKit.Image("Window", disc.transform, Color.white, Sprites.Circle);
+            window.raycastTarget = false;
+            UIKit.Stretch(window.rectTransform, size * 0.075f);
+            window.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var icon = UIKit.Image("Icon", window.transform, unlocked ? Color.white : new Color(0.6f, 0.6f, 0.6f), Icons.House(house));
+            icon.raycastTarget = false;
+            UIKit.Cover(icon);
+        }
+
+        // Дом на карте кампании: платформа в точке дороги, на ней круглая картинка дома, ниже табличка с именем.
+        // Закрытый — платформа в цепях с замком; текущий — платформа с флагом, сияние и путник рядом.
+        void CampaignNode(Transform parent, LevelInfo level, Vector2 point)
+        {
+            var progress = game.Progress;
+            bool unlocked = game.IsUnlocked(level.Index);
+            bool current = level.Index == progress.Unlocked;
+            int stars = progress.StarsAt(level.Index);
+
+            // Узел стоит центром платформы точно в точке карты; в горизонтальной карте точки теснее — узлы мельче.
+            var node = UIKit.Rect("House", parent);
+            node.anchorMin = node.anchorMax = point;
+            node.anchoredPosition = Vector2.zero;
+            node.sizeDelta = new Vector2(190, 210);
+            node.localScale = Vector3.one * (L.Portrait ? 1f : 0.72f);
+
+            if (current)
+            {
+                var glow = UIKit.Image("Glow", node, new Color(1, 0.85f, 0.3f, 0.85f), Sprites.Light);
+                glow.raycastTarget = false;
+                UIKit.Place(glow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(300, 300));
+                glow.DOFade(0.3f, 0.7f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(glow.gameObject);
+            }
+
+            if (current)
+            {
+                // Золотой луч из платформы — «сюда».
+                var beamSprite = ArtStore.Get("Fx/BeamGold", null);
+                if (beamSprite != null)
+                {
+                    var beam = UIKit.Image("Beam", node, Color.white, beamSprite);
+                    beam.raycastTarget = false;
+                    beam.preserveAspect = true;
+                    UIKit.Place(beam.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 30), new Vector2(240, 200));
+                    beam.DOFade(0.45f, 0.9f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(beam.gameObject);
+                }
+            }
+
+            var platform = MenuArt.Platform(!unlocked ? "Locked" : current ? "Current" : "Open");
+            var pl = UIKit.Image("Platform", node, platform != null ? Color.white : new Color(0.45f, 0.4f, 0.35f), platform != null ? platform : Sprites.Circle);
+            pl.raycastTarget = false;
+            pl.preserveAspect = true;
+            UIKit.Place(pl.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(170, 170));
+
+            if (unlocked)
+            {
+                // Дом «стоит» на платформе: тень под ним, сам круг чуть выше центра.
+                var shadow = UIKit.Image("Shadow", node, new Color(0, 0, 0, 0.35f), Sprites.ShadowCircle);
+                shadow.raycastTarget = false;
+                UIKit.Place(shadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 8), new Vector2(110, 40));
+                HouseDisc(node, level.House, true, new Vector2(0, 62), 112);
+            }
+
+            var plaque = UIKit.Image("Plaque", node, DarkWood, Sprites.Panel);
+            plaque.raycastTarget = false;
+            UIKit.Place(plaque.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -60), new Vector2(200, 42));
+            var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", L.BodyFont - 2, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
+            UIKit.Stretch(name.rectTransform, 6);
+            name.resizeTextForBestFit = true;
+            name.resizeTextMinSize = L.BodyFont - 10;
+            name.resizeTextMaxSize = L.BodyFont - 2;
+
+            if (stars > 0)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    var star = UIKit.Image("Star", node, Color.white, i < stars ? GuestArt.Star : GuestArt.StarEmpty);
+                    star.raycastTarget = false;
+                    UIKit.Place(star.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2((i - 1) * 36, i == 1 ? 134 : 126), new Vector2(36, 36));
+                }
+            }
+
+            if (!unlocked)
+            {
+                // Подсказку показываем только у ближайшего закрытого дома.
+                if (level.Index == progress.Unlocked + 1)
+                {
+                    var prev = HouseDatabase.Level(level.Index - 1);
+                    var pill = UIKit.Image("Hint", node, new Color(0.15f, 0.12f, 0.12f, 0.85f), Sprites.Soft);
+                    pill.raycastTarget = false;
+                    UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -112), new Vector2(290, 44));
+                    var t = UIKit.Text(pill.transform, $"Пройди «{prev.Title}»", L.BodyFont - 4, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
+                    UIKit.Stretch(t.rectTransform, 6);
+                    t.resizeTextForBestFit = true;
+                    t.resizeTextMinSize = 12;
+                    t.resizeTextMaxSize = L.BodyFont - 4;
+                }
+                return;
+            }
+
+            if (current)
+            {
+                // Путник стоит у дома, который пора проходить.
+                var hero = UIKit.Image("Hero", node, Color.white, GuestArt.Character(GuestDatabase.Traveler));
+                hero.raycastTarget = false;
+                hero.preserveAspect = true;
+                UIKit.Place(hero.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0), new Vector2(92, -10), new Vector2(100, 110));
+                hero.rectTransform.DOAnchorPosY(12, 0.5f).SetRelative().SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine)
+                    .SetLink(hero.gameObject);
+            }
+
+            if (game.SavedLevel == level.Index)
+            {
+                // Здесь есть начатый день — его можно продолжить.
+                var pill = UIKit.Image("Saved", node, RoomDatabase.Hex("2fb5c4"), Sprites.Panel);
+                pill.raycastTarget = false;
+                UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -112), new Vector2(230, 44));
+                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"▶ день {SaveSystem.LoadRun()?.Night}", L.BodyFont - 4, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+                UIKit.Stretch(t.rectTransform, 4);
+            }
+
+            var hit = node.gameObject.AddComponent<Image>();
+            hit.color = Color.clear;
+            var b = node.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.targetGraphic = hit;
+            int index = level.Index;
+            b.onClick.AddListener(() =>
+            {
+                Sfx.Click();
                 if (game.SavedLevel == index) game?.ContinueRun();
                 else game?.StartLevel(index);
             });

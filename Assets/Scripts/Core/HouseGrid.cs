@@ -5,10 +5,10 @@ namespace CardHome
 {
     public class PlacedRoom
     {
-        public RoomType Type;
-        public Doors Doors; // уже с учётом поворота
-        public int Level = 1; // 2 — улучшена такой же картой
-        public bool Broken;   // сломана гостем: не работает, пока не починят
+        public RoomType Type { get; init; }
+        public Doors Doors { get; internal set; } // уже с учётом поворота
+        public int Level { get; internal set; } = 1; // 2 — улучшена такой же картой
+        public bool Broken { get; internal set; }   // сломана гостем: не работает, пока не починят
         public RoomDef Def => RoomDatabase.Get(Type);
         public bool Working => !Broken;
     }
@@ -20,7 +20,7 @@ namespace CardHome
         public const int Height = 5;
         public const int MaxLevel = Card.MaxLevel;
 
-        public readonly Vector2Int Entrance = new Vector2Int(2, 0);
+        public Vector2Int Entrance { get; } = new Vector2Int(2, 0);
 
         readonly PlacedRoom[,] cells = new PlacedRoom[Width, Height];
 

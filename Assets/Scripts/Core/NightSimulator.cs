@@ -8,25 +8,25 @@ namespace CardHome
 
     public class GuestStep
     {
-        public Vector2Int Pos;
-        public int Delta;
-        public string Text; // пусто = гость просто проходит мимо
-        public bool Trap;   // здесь гостя поймал капкан
+        public Vector2Int Pos { get; init; }
+        public int Delta { get; init; }
+        public string Text { get; init; } // пусто = гость просто проходит мимо
+        public bool Trap { get; init; }   // здесь гостя поймал капкан
     }
 
     public class GuestResult
     {
-        public GuestDef Guest;
-        public readonly List<GuestStep> Steps = new List<GuestStep>();
-        public int Mood;
-        public Outcome Outcome;
-        public int Gold;
-        public int Reputation;
-        public string Summary;
+        public GuestDef Guest { get; init; }
+        public List<GuestStep> Steps { get; } = new List<GuestStep>();
+        public int Mood { get; internal set; }
+        public Outcome Outcome { get; internal set; }
+        public int Gold { get; internal set; }
+        public int Reputation { get; internal set; }
+        public string Summary { get; internal set; }
         // Последствия: сломанная комната и гость, который вернётся.
-        public Vector2Int? Broke;
-        public string BreakText;
-        public bool BecomesRegular;
+        public Vector2Int? Broke { get; internal set; }
+        public string BreakText { get; internal set; }
+        public bool BecomesRegular { get; internal set; }
     }
 
     // Чистая логика ночи: считает весь маршрут гостя заранее, без анимации.
@@ -45,7 +45,7 @@ namespace CardHome
         }
 
         // Сколько настроения даёт комната этому гостю и почему.
-        public static int RoomValue(HouseGrid grid, Vector2Int p, GuestDef g, List<string> notes)
+        static int RoomValue(HouseGrid grid, Vector2Int p, GuestDef g, List<string> notes)
         {
             var room = grid.Get(p);
             if (room.Broken)

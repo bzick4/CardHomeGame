@@ -8,11 +8,12 @@ namespace CardHome
     // Точка на карте странствия.
     public class MapNode
     {
-        public int Row, Col;
-        public NodeKind Kind;
-        public int House;   // какой дом (индекс в HouseDatabase.All) — для домов и босса
-        public float X;     // положение по горизонтали: −1 … 1
-        public readonly List<int> Next = new List<int>(); // в какие точки следующего ряда ведут тропы
+        public int Row { get; init; }
+        public int Col { get; init; }
+        public NodeKind Kind { get; internal set; }
+        public int House { get; internal set; }   // какой дом (индекс в HouseDatabase.All) — для домов и босса
+        public float X { get; internal set; }     // положение по горизонтали: −1 … 1
+        public List<int> Next { get; } = new List<int>(); // в какие точки следующего ряда ведут тропы
     }
 
     // Карта одного забега: ряды точек снизу вверх, тропы только в следующий ряд, наверху — босс.
@@ -33,7 +34,7 @@ namespace CardHome
             return NodeKind.Rest;
         }
 
-        public readonly List<List<MapNode>> Grid = new List<List<MapNode>>();
+        public List<List<MapNode>> Grid { get; } = new List<List<MapNode>>();
         public int Seed { get; private set; }
 
         public MapNode Get(int row, int col) =>

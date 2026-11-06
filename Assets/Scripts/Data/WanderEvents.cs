@@ -6,18 +6,18 @@ namespace CardHome
     // Вариант ответа в случае: подпись, условие (можно ли выбрать) и последствие (возвращает текст итога).
     public class EventChoice
     {
-        public string Label;
-        public Func<GameController, bool> Can;
-        public Func<GameController, string> Apply;
+        public string Label { get; init; }
+        public Func<GameController, bool> Can { get; init; }
+        public Func<GameController, string> Apply { get; init; }
     }
 
     // Случай на карте странствия: короткая история с выбором.
     public class WanderEvent
     {
-        public string Title;
-        public string Text;
-        public string GuestId;   // чей портрет показать (Id гостя)
-        public EventChoice[] Choices;
+        public string Title { get; init; }
+        public string Text { get; init; }
+        public string GuestId { get; init; }   // чей портрет показать (Id гостя)
+        public EventChoice[] Choices { get; init; }
     }
 
     public static class WanderEvents

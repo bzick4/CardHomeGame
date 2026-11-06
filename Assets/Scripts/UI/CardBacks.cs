@@ -9,11 +9,13 @@ namespace CardHome
     // Окантовка рубашки — выдаётся за круг сложности.
     public class BackTier
     {
-        public string Name;
-        public Color Main, Dark, Gem;
-        public bool Shimmer;   // бегущий блик (с изумрудной)
-        public bool Glow;      // пульсирующее сияние вокруг (эпичная+)
-        public bool Sparkles;  // искры (легендарная)
+        public string Name { get; init; }
+        public Color Main { get; init; }
+        public Color Dark { get; init; }
+        public Color Gem { get; init; }
+        public bool Shimmer { get; init; }   // бегущий блик (с изумрудной)
+        public bool Glow { get; init; }      // пульсирующее сияние вокруг (эпичная+)
+        public bool Sparkles { get; init; }  // искры (легендарная)
     }
 
     // Рубашки карт гостей: у каждого дома своя тема, у каждого круга — своя окантовка.
@@ -22,7 +24,8 @@ namespace CardHome
     // Код рубашки: 0 — обычная «Странник» (есть всегда), иначе 1 + тема·100 + окантовка.
     //
     // Свой арт: Assets/Resources/Art/Backs/Theme<N>.png (рисунок без рамки, 0..9 по домам, 10 — Странник)
-    // и Art/Backs/Frame<N>.png (рамка с прозрачной серединой, 0..8 по кругам).
+    // и Art/Frames/Frame<N>.png (рамка с прозрачной серединой, 0..8 по кругам) — одна и та же рамка
+    // и для рубашек, и для лица карт комнат.
     public static class CardBacks
     {
         public const int DefaultCode = 0;
@@ -36,10 +39,10 @@ namespace CardHome
             T("Бронза", "c27a3e", "7a4520", "e8a868"),
             T("Серебро", "c5ccd4", "6d7680", "eef3f8"),
             T("Золото", "e8b830", "8a6410", "fff0a0"),
-            T("Алмаз", "a8e6ff", "3f8fb0", "f2fdff"),
-            T("Рубин", "d4a62c", "7a5a10", "e0304a"),
-            T("Изумруд", "d4a62c", "7a5a10", "2fd07a", shimmer: true),
-            T("Эпичная", "8a4ad8", "3f1a70", "e0a8ff", shimmer: true, glow: true),
+            T("Изумруд", "c9a43a", "6a5a10", "2fd07a"),
+            T("Сапфир", "9fb8e0", "3f5f90", "3f8fff"),
+            T("Аметист", "b48ae0", "4a2a80", "c86bff", shimmer: true),
+            T("Рубин", "e8a028", "8a4a08", "e0304a", shimmer: true, glow: true),
             T("Легендарная", "f2a51e", "8a4a08", "ff5a2a", shimmer: true, glow: true, sparkles: true),
         };
 
@@ -73,6 +76,27 @@ namespace CardHome
         public static Sprite ThemeSprite(int theme) => Get("Theme" + theme, () => PaintTheme(theme).Render(160, 224, 1f, 0.4f));
         public static Sprite FrameSprite(int tier) => Get("Frame" + tier, () => PaintFrame(tier).Render(176, 246, FramePad, 0.5f));
 
+        // Рамка-картинка: холст 380×516, сама карта 300×420 стоит на нём со смещением (40, 48) —
+        // запас по краям нужен под крылья, короны и кристаллы.
+        static readonly Vector2 ArtFrameOut = new Vector2(40f / 300f, 48f / 420f);
+        // Отступ содержимого карты (рубашки или лица) от её края — 8 из 300×420.
+        static readonly Vector2 ArtInset = new Vector2(8f / 300f, 8f / 420f);
+        public static Sprite FrameArt(int tier) => ArtStore.Get("Frames/Frame" + tier, null);
+
+        // Рамка слоем поверх карты (лица или рубашки). Привязки в долях карты, поэтому размер карты знать не нужно.
+        public static Image AddFrame(RectTransform card, int tier)
+        {
+            var art = FrameArt(tier);
+            var img = UIKit.Image("Frame", card, Color.white, art != null ? art : FrameSprite(tier));
+            img.raycastTarget = false;
+            var o = art != null ? ArtFrameOut : Vector2.one * (FramePad - 1) / 2;
+            var rt = img.rectTransform;
+            rt.anchorMin = -o;
+            rt.anchorMax = Vector2.one + o;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            return img;
+        }
+
         // Рубашка как элемент интерфейса: рисунок, рамка и эффекты окантовки.
         public static RectTransform Create(Transform parent, int code, Vector2 size)
         {
@@ -89,9 +113,13 @@ namespace CardHome
                 glow.DOFade(0.25f, 0.9f).From(0.85f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(glow.gameObject);
             }
 
+            // Рисунок чуть меньше карты: планки рамок начинаются немного внутри края, иначе он выглядывает.
             var art = UIKit.Image("Art", root, Color.white, ThemeSprite(theme));
             art.raycastTarget = false;
-            UIKit.Stretch(art.rectTransform);
+            var ar = art.rectTransform;
+            ar.anchorMin = ArtInset;
+            ar.anchorMax = Vector2.one - ArtInset;
+            ar.offsetMin = ar.offsetMax = Vector2.zero;
 
             if (tier.Shimmer)
             {
@@ -111,12 +139,7 @@ namespace CardHome
                     .SetLink(band.gameObject);
             }
 
-            var frame = UIKit.Image("Frame", root, Color.white, FrameSprite(TierOf(code)));
-            frame.raycastTarget = false;
-            UIKit.Stretch(frame.rectTransform);
-            var extra = size * (FramePad - 1) / 2;
-            frame.rectTransform.offsetMin = -extra;
-            frame.rectTransform.offsetMax = extra;
+            AddFrame(root, TierOf(code));
 
             if (tier.Sparkles)
             {
@@ -340,7 +363,7 @@ namespace CardHome
                 p.Box(0, 1.32f, 0.06f, 0.06f, 0.01f, t.Gem, true, 45);
                 p.Box(0, -1.32f, 0.06f, 0.06f, 0.01f, t.Gem, true, 45);
             }
-            // Алмаз и выше: кристаллы, торчащие из рамки.
+            // Изумруд и выше: кристаллы, торчащие из рамки (рисованная рамка, если нет картинки).
             if (tier >= 4)
             {
                 foreach (int s in new[] { -1, 1 })
@@ -349,7 +372,7 @@ namespace CardHome
                     p.Poly(t.Gem, V(s * 0.5f, -1.32f), V(s * 0.58f, -1.48f), V(s * 0.66f, -1.32f));
                 }
             }
-            // Рубин и выше: камни по бокам.
+            // Сапфир и выше: камни по бокам.
             if (tier >= 5)
             {
                 foreach (int s in new[] { -1, 1 })
@@ -358,7 +381,7 @@ namespace CardHome
                     p.Oval(s * 0.92f, 0, 0.045f, 0.09f, t.Gem);
                 }
             }
-            // Изумруд и выше: завитки у углов.
+            // Аметист и выше: завитки у углов.
             if (tier >= 6)
             {
                 foreach (var c in corners)
@@ -368,7 +391,7 @@ namespace CardHome
                     p.Ring(c.x + d.x * 0.05f, c.y + d.y * 0.24f, 0.07f, 0.018f, t.Main, true);
                 }
             }
-            // Эпичная и выше: корона сверху.
+            // Рубин и выше: корона сверху.
             if (tier >= 7)
             {
                 p.Poly(t.Main, V(-0.3f, 1.36f), V(-0.2f, 1.5f), V(-0.08f, 1.38f), V(0, 1.54f), V(0.08f, 1.38f), V(0.2f, 1.5f), V(0.3f, 1.36f));

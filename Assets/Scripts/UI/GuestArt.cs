@@ -23,7 +23,7 @@ namespace CardHome
             .Render(256, 64, 1.02f, 0.5f));
         public static Sprite Sun => Get("Sun", PaintSun);
         public static Sprite Moon => Get("Moon", PaintMoon);
-        public static Sprite Back => Get("Back", () => PaintBack().Render(160, 224, 1.02f, 0.6f));
+        static Sprite Back => Get("Back", () => PaintBack().Render(160, 224, 1.02f, 0.6f));
         public static Sprite Role(GuestRole r) => Get("Role" + r, () => PaintRole(r).Render(128));
         public static Sprite Lock => Get("Lock", () => new Painter()
             .Ring(0, 0.25f, 0.38f, 0.1f, H("9aa6ad"), true)

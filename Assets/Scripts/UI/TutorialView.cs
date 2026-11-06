@@ -20,13 +20,13 @@ namespace CardHome
 
         class Step
         {
-            public string Text;
-            public Func<RectTransform> Target;
-            public Action<TutorialGate> Gate;
-            public Func<bool> Done;     // шаг ждёт действия игрока
-            public string Button;       // или кнопку «Далее»
-            public Action OnButton;
-            public bool Hidden;         // ничего не показывать (идёт ночь)
+            public string Text { get; init; }
+            public Func<RectTransform> Target { get; init; }
+            public Action<TutorialGate> Gate { get; init; }
+            public Func<bool> Done { get; init; }     // шаг ждёт действия игрока
+            public string Button { get; init; }       // или кнопку «Далее»
+            public Action OnButton { get; init; }
+            public bool Hidden { get; init; }         // ничего не показывать (идёт ночь)
         }
 
         GameView view;
@@ -87,7 +87,12 @@ namespace CardHome
 
         // ───────────── Шаги ─────────────
 
-        int CardIndex(RoomType t) => game.Hand.FindIndex(c => c.Type == t);
+        int CardIndex(RoomType t)
+        {
+            for (int i = 0; i < game.Hand.Count; i++)
+                if (game.Hand[i].Type == t) return i;
+            return -1;
+        }
 
         void BuildSteps()
         {

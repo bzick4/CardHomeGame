@@ -23,9 +23,10 @@ namespace CardHome
     {
         class Entry
         {
-            public Sprite Sprite;
-            public bool OwnsSprite, OwnsTexture;
-            public ArtScope Scope;
+            public Sprite Sprite { get; set; }
+            public bool OwnsSprite { get; set; }
+            public bool OwnsTexture { get; set; }
+            public ArtScope Scope { get; init; }
         }
 
         static readonly Dictionary<string, Entry> entries = new Dictionary<string, Entry>();
@@ -63,8 +64,8 @@ namespace CardHome
         // К какому набору относится картинка — по папке.
         static ArtScope ScopeOf(string path)
         {
-            if (path.StartsWith("Menu/") || path.StartsWith("Wander/")) return ArtScope.Screen;
-            if (path.StartsWith("Locations/") || path.StartsWith("RoomCards/")) return ArtScope.Level;
+            if (path.StartsWith("Menu/") || path.StartsWith("Wander/") || path.StartsWith("Map/Campaign")) return ArtScope.Screen;
+            if (path.StartsWith("Locations/") || path.StartsWith("RoomArt/")) return ArtScope.Level;
             if (path.StartsWith("Backs/Theme") || path.StartsWith("Backs/Frame")) return ArtScope.Level;
             if (path.StartsWith("Cards/"))
             {
@@ -131,7 +132,7 @@ namespace CardHome
             {
                 var type = t;
                 steps.Add(() => Icons.Room(type));
-                steps.Add(() => Icons.RoomCard(type));
+                steps.Add(() => Icons.RoomArt(type));
             }
 
             steps.Add(() => { var _ = GuestArt.Backdrop; });
@@ -144,6 +145,13 @@ namespace CardHome
                 steps.Add(() => GuestArt.Role(role));
             }
             steps.Add(() => { var _ = Icons.Coin; });
+            steps.Add(() => { var _ = Icons.TextPanel; });
+            // Эффекты партии (Art/Fx): подсветка клеток, ночь, ловушки, улучшение.
+            foreach (var fx in new[] { "TileOk", "TileBad", "MoodUp", "MoodDown", "Shield", "Dust", "Coins", "Heart", "GhostSmoke", "Sparkles" })
+            {
+                string name = fx;
+                steps.Add(() => Get("Fx/" + name, null));
+            }
             steps.Add(() => { var _ = Icons.Crack; });
 
             // Рубашки: соперника этого дома и игрока; окантовки первых уровней карт.
@@ -153,10 +161,11 @@ namespace CardHome
                 steps.Add(() => CardBacks.ThemeSprite(CardBacks.ThemeOf(c)));
                 steps.Add(() => CardBacks.FrameSprite(CardBacks.TierOf(c)));
             }
-            for (int tier = 1; tier <= 3; tier++)
+            for (int tier = 0; tier <= 3; tier++)
             {
                 int t = tier;
                 steps.Add(() => CardBacks.FrameSprite(t));
+                steps.Add(() => CardBacks.FrameArt(t));
             }
             return steps;
         }

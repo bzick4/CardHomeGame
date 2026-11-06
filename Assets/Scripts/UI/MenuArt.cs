@@ -24,13 +24,20 @@ namespace CardHome
 
         static Sprite LoadArt(string name) => ArtStore.Get("Menu/" + name, null);
 
-        public static Sprite Background => LoadArt("Background");
-        public static Sprite BackgroundWide => LoadArt("BackgroundWide");
+        static Sprite Background => LoadArt("Background");
+        static Sprite BackgroundWide => LoadArt("BackgroundWide");
 
         public static Sprite BackgroundFor(bool portrait) =>
             portrait ? (Background != null ? Background : BackgroundWide) : (BackgroundWide != null ? BackgroundWide : Background);
 
         static Vector2 V(float x, float y) => new Vector2(x, y);
+
+        // ───────────── Карта кампании ─────────────
+        // Art/Map/Campaign.png (9:16) и CampaignWide.png (16:9) — фон выбора домов; точки домов — в CampaignPoints.
+        // Art/Map/Nodes/PlatformOpen|Current|Locked.png — платформы под домами.
+
+        public static Sprite Campaign(bool wide) => ArtStore.Get("Map/Campaign" + (wide ? "Wide" : ""), null);
+        public static Sprite Platform(string kind) => ArtStore.Get("Map/Nodes/Platform" + kind, null);
 
         // ───────────── Карта странствия ─────────────
         // Свои картинки (необязательно), Assets/Resources/Art/Wander/:
@@ -94,7 +101,7 @@ namespace CardHome
         });
 
         // Сундук — дом (гостевой дом с наградой).
-        public static Sprite Chest => Get("Chest", () => new Painter()
+        static Sprite Chest => Get("Chest", () => new Painter()
             .Box(0, -0.25f, 0.72f, 0.38f, 0.06f, H("8a5a32"))
             .Box(0, 0.22f, 0.72f, 0.2f, 0.18f, H("b07a44"))
             .Box(-0.45f, -0.05f, 0.07f, 0.6f, 0, H("d4a62c"), false)
@@ -120,46 +127,15 @@ namespace CardHome
             return p;
         });
 
-        public static Sprite Compass => Icon("Compass", () => new Painter()
+        static Sprite Compass => Icon("Compass", () => new Painter()
             .Circle(0, 0, 0.8f, H("d4a62c"))
             .Circle(0, 0, 0.64f, H("f3e6c6"))
             .Poly(H("d0473c"), V(0, 0.55f), V(0.13f, 0), V(-0.13f, 0))
             .Poly(H("9aa6ad"), V(0, -0.55f), V(0.13f, 0), V(-0.13f, 0))
             .Circle(0, 0, 0.07f, H("2b2420"), false));
 
-        public static Sprite HomeIcon => Icon("Home", () => new Painter()
-            .Box(0.32f, 0.42f, 0.08f, 0.16f, 0.02f, H("8a5a32"))
-            .Box(0, -0.25f, 0.55f, 0.45f, 0.05f, H("e8c48a"))
-            .Poly(H("c8483c"), V(-0.78f, 0.15f), V(0, 0.78f), V(0.78f, 0.15f))
-            .Box(0, -0.42f, 0.14f, 0.28f, 0.07f, H("6b4423"))
-            .Box(-0.3f, -0.15f, 0.12f, 0.11f, 0.02f, H("ffc861")));
-
-        public static Sprite PlayIcon => Icon("Play", () => new Painter()
-            .Circle(0, 0, 0.8f, H("4cbb5a"))
-            .Poly(H("fbf7ee"), V(-0.22f, -0.4f), V(-0.22f, 0.4f), V(0.45f, 0)));
-
         public static Sprite BackIcon => Icon("Back", () => new Painter()
             .Poly(H("6b4423"), V(0.35f, 0.6f), V(0.35f, -0.6f), V(-0.5f, 0)));
 
-        public static Sprite FlagIcon => Icon("Flag", () => new Painter()
-            .Box(-0.45f, -0.05f, 0.06f, 0.82f, 0.02f, H("8a5a32"))
-            .Poly(H("6b4423"), V(-0.4f, 0.75f), V(0.62f, 0.48f), V(-0.4f, 0.2f)));
-
-        public static Sprite SoundIcon => Icon("Sound", () => new Painter()
-            .Box(-0.45f, 0, 0.16f, 0.22f, 0.03f, H("6b4423"))
-            .Poly(H("6b4423"), V(-0.35f, 0.22f), V(0.15f, 0.62f), V(0.15f, -0.62f), V(-0.35f, -0.22f))
-            .Ring(0.2f, 0, 0.42f, 0.05f, H("6b4423"), true));
-
-        public static Sprite BookIcon => Icon("Book", () => new Painter()
-            .Box(0, 0, 0.62f, 0.75f, 0.06f, H("3f7ad4"))
-            .Box(0.08f, 0, 0.5f, 0.66f, 0.04f, H("f3e6c6"))
-            .Box(-0.55f, 0, 0.08f, 0.75f, 0.03f, H("2c5aa0"))
-            .Box(0.12f, 0.25f, 0.3f, 0.04f, 0, H("b08a55"), false)
-            .Box(0.12f, 0.05f, 0.3f, 0.04f, 0, H("b08a55"), false));
-
-        public static Sprite DeckIcon => Icon("Deck", () => new Painter()
-            .Box(-0.18f, 0.08f, 0.45f, 0.62f, 0.08f, H("8a5a32"), true, 8)
-            .Box(0.12f, -0.05f, 0.45f, 0.62f, 0.08f, H("c9945a"), true, -6)
-            .Box(0.12f, -0.05f, 0.18f, 0.18f, 0.03f, H("ffcf3a"), true, 39));
     }
 }

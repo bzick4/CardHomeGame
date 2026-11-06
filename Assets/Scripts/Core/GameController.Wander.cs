@@ -23,12 +23,13 @@ namespace CardHome
         public int RewardLevel => IsWander && HouseFinished && activeNode != null && activeNode.Kind == NodeKind.Elite ? 2 : 1;
         public WanderEvent CurrentEvent { get; private set; }
         public string EventResult { get; private set; }
-        public NodeKind ActiveKind => activeNode != null ? activeNode.Kind : NodeKind.House;
+        NodeKind ActiveKind => activeNode != null ? activeNode.Kind : NodeKind.House;
         public bool HasWanderSave => SaveSystem.HasWander;
         public int RunDeckSize => runDeck.Count;
 
         // Товары ярмарки: карта и цена; проданные убираются.
-        public readonly List<(Card card, int price)> FairOffers = new List<(Card, int)>();
+        readonly List<(Card card, int price)> fairOffers = new List<(Card card, int price)>();
+        public IReadOnlyList<(Card card, int price)> FairOffers => fairOffers;
 
         readonly List<Card> runDeck = new List<Card>();
         MapNode activeNode;
@@ -54,7 +55,7 @@ namespace CardHome
             ShowMap();
         }
 
-        public void NewWander()
+        void NewWander()
         {
             IsWander = true;
             int seed = rng.Next(1, int.MaxValue);
@@ -140,10 +141,10 @@ namespace CardHome
                 NightCount = WanderNights,
                 NightOffset = Mathf.Min(4, n.Row / 2 + (n.Kind == NodeKind.Boss ? 4 : 0) + (elite ? 2 : 0)),
                 MaliceBonus = elite ? 0.25f : 0,
+                TitleOverride = n.Kind == NodeKind.Boss ? $"Логово Хозяина · {HouseDatabase.All[n.House].Name}"
+                    : elite ? $"Опасно! {HouseDatabase.All[n.House].Name} · шаг {n.Row + 1}"
+                    : $"{HouseDatabase.All[n.House].Name} · шаг {n.Row + 1}",
             };
-            level.TitleOverride = n.Kind == NodeKind.Boss ? $"Логово Хозяина · {level.House.Name}"
-                : elite ? $"Опасно! {level.House.Name} · шаг {n.Row + 1}"
-                : $"{level.House.Name} · шаг {n.Row + 1}";
             if (elite)
                 Hint("elite", "Опасный дом",
                     "Здесь соперник злее и гостей больше. Зато в конце — +8 золота и выбор из бронзовых карт.");
@@ -183,8 +184,8 @@ namespace CardHome
             }
 
             // Награда после каждой ночи; после последней — карта в колоду и обратно на карту.
-            RewardOptions.Clear();
-            RewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3));
+            rewardOptions.Clear();
+            rewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3));
             SetPhase(Phase.Reward);
             Changed?.Invoke();
         }
@@ -205,7 +206,7 @@ namespace CardHome
             Wander.Deck = runDeck.Select(c => c.Code).ToList();
             SaveSystem.SaveWander(Wander);
             HouseFinished = false;
-            Hand.Clear();
+            handCards.Clear();
             ShowMap();
         }
 
@@ -213,13 +214,13 @@ namespace CardHome
 
         void OpenFair()
         {
-            FairOffers.Clear();
+            fairOffers.Clear();
             var types = RoomDatabase.RewardOffer(rng, 3);
             for (int i = 0; i < types.Count; i++)
             {
                 // Одна карта на ярмарке — сразу бронзовая, подороже.
                 bool rare = i == types.Count - 1 && RoomDatabase.Get(types[i]).CanUpgrade;
-                FairOffers.Add((new Card(types[i], rare ? 2 : 1), rare ? FairRarePrice : FairCardPrice));
+                fairOffers.Add((new Card(types[i], rare ? 2 : 1), rare ? FairRarePrice : FairCardPrice));
             }
             SetPhase(Phase.Fair);
             Changed?.Invoke();
@@ -230,11 +231,11 @@ namespace CardHome
 
         public void BuyFairCard(int index)
         {
-            if (State != Phase.Fair || index < 0 || index >= FairOffers.Count) return;
-            var (card, price) = FairOffers[index];
+            if (State != Phase.Fair || index < 0 || index >= fairOffers.Count) return;
+            var (card, price) = fairOffers[index];
             if (!Pay(price)) return;
             runDeck.Add(card);
-            FairOffers.RemoveAt(index);
+            fairOffers.RemoveAt(index);
             AddLog($"Ярмарка: куплена карта «{card.Title}» (−{price})");
             Changed?.Invoke();
         }

@@ -17,12 +17,16 @@ namespace CardHome
 
         enum Glow { None, Picked, Upgrade }
 
-        public RectTransform Root;
-        public Button Button;
-        public bool IsValid { get; private set; }
-        public bool HasRoom { get; private set; }
+        public RectTransform Root { get; private set; }
+        public Button Button { get; private set; }
+        bool IsValid { get; set; }
+        bool HasRoom { get; set; }
 
-        readonly Image slot, glow, shadow, body, floor, icon, crack, shade, lamp, badge;
+        static readonly Color SlotTint = new Color(1, 1, 1, 0.9f);
+        static readonly Color SlotValidTint = RoomDatabase.Hex("b8ff9a");
+
+        readonly Image slot, glow, shadow, body, floor, icon, art, walls, labelBg, crack, shade, lamp, badge;
+        readonly Sprite slotArt;
         readonly Text label, badgeText;
         readonly Image[] doors = new Image[4];
         Glow glowMode;
@@ -33,8 +37,10 @@ namespace CardHome
             Root = UIKit.Rect("Tile", parent);
             Root.sizeDelta = new Vector2(size, size);
 
-            slot = UIKit.Image("Slot", Root, SlotColor, Sprites.Soft);
-            UIKit.Stretch(slot.rectTransform, size * 0.04f);
+            // Пустой паз: нарисованный (Art/Board/Slot) или тёмный квадрат.
+            slotArt = GameView.BoardArt("Slot");
+            slot = UIKit.Image("Slot", Root, slotArt != null ? SlotTint : SlotColor, slotArt != null ? slotArt : Sprites.Soft);
+            UIKit.Stretch(slot.rectTransform, size * (slotArt != null ? 0.02f : 0.04f));
 
             // Свечение вокруг комнаты: жёлтое — взята для переноса, зелёное — можно улучшить.
             glow = UIKit.Image("Glow", Root, PickColor, Sprites.Shadow);
@@ -62,8 +68,22 @@ namespace CardHome
             UIKit.Place(icon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0, showLabel ? size * 0.08f : 0), new Vector2(iconSize, iconSize));
 
-            // Трещины поверх сломанной комнаты.
-            crack = UIKit.Image("Crack", body.transform, Color.white, Icons.Crack);
+            // Готовая картинка комнаты (Art/RoomArt, та же, что на картах) — если есть, вместо значка на цветном фоне.
+            art = UIKit.Image("Art", body.transform, Color.white);
+            art.raycastTarget = false;
+            art.preserveAspect = true;
+            UIKit.Stretch(art.rectTransform, -1);
+            art.enabled = false;
+
+            // Стены комнаты (Art/Board/TileFrame) поверх картинки — закрывают её собственную кромку.
+            walls = UIKit.Image("Walls", body.transform, Color.white, GameView.BoardArt("TileFrame"));
+            walls.raycastTarget = false;
+            UIKit.Stretch(walls.rectTransform, -size * 0.01f);
+            walls.enabled = false;
+
+            // Трещины поверх сломанной комнаты: нарисованный пролом или трещины кодом.
+            var brokenArt = GameView.BoardArt("Broken");
+            crack = UIKit.Image("Crack", body.transform, Color.white, brokenArt != null ? brokenArt : Icons.Crack);
             crack.raycastTarget = false;
             UIKit.Stretch(crack.rectTransform, size * 0.06f);
             crack.enabled = false;
@@ -79,7 +99,8 @@ namespace CardHome
             for (int i = 0; i < 4; i++)
             {
                 var d = DoorsUtil.All[i];
-                var img = UIKit.Image("Door" + d, Root, DoorColor, Sprites.Pill);
+                var doorArt = GameView.BoardArt("Door");
+                var img = UIKit.Image("Door" + d, Root, doorArt != null ? Color.white : DoorColor, doorArt != null ? doorArt : Sprites.Pill);
                 img.raycastTarget = false;
                 var rt = img.rectTransform;
                 bool horizontalEdge = d == Doors.N || d == Doors.S;
@@ -88,13 +109,33 @@ namespace CardHome
                 rt.anchorMin = rt.anchorMax = edge;
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.anchoredPosition = Vector2.zero;
-                float len = size * 0.34f, thick = Mathf.Max(10, size * 0.11f);
-                rt.sizeDelta = horizontalEdge ? new Vector2(len, thick) : new Vector2(thick, len);
+                if (doorArt != null)
+                {
+                    // Нарисованный проём лежит поперёк стены: горизонтальный, для боковых стен повёрнут.
+                    float len = size * 0.4f;
+                    rt.sizeDelta = new Vector2(len, len * doorArt.rect.height / doorArt.rect.width);
+                    if (!horizontalEdge) rt.localEulerAngles = new Vector3(0, 0, 90);
+                }
+                else
+                {
+                    float len = size * 0.34f, thick = Mathf.Max(10, size * 0.11f);
+                    rt.sizeDelta = horizontalEdge ? new Vector2(len, thick) : new Vector2(thick, len);
+                }
                 doors[i] = img;
             }
 
             if (showLabel)
             {
+                // Тёмная плашка под названием — чтобы читалось поверх картинки комнаты.
+                labelBg = UIKit.Image("LabelBg", Root, new Color(0.08f, 0.05f, 0.04f, 0.62f), Sprites.Soft);
+                labelBg.raycastTarget = false;
+                labelBg.rectTransform.anchorMin = new Vector2(0, 0);
+                labelBg.rectTransform.anchorMax = new Vector2(1, 0);
+                labelBg.rectTransform.pivot = new Vector2(0.5f, 0);
+                labelBg.rectTransform.offsetMin = new Vector2(size * 0.1f, size * 0.07f);
+                labelBg.rectTransform.offsetMax = new Vector2(-size * 0.1f, size * 0.07f + fontSize + 6);
+                labelBg.enabled = false;
+
                 label = UIKit.Outlined(UIKit.Text(Root, "", fontSize, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
                 label.rectTransform.anchorMin = new Vector2(0, 0);
                 label.rectTransform.anchorMax = new Vector2(1, 0);
@@ -141,10 +182,21 @@ namespace CardHome
             slot.enabled = false;
             shadow.enabled = body.enabled = true;
             broken = isBroken;
-            body.color = broken ? def.Color * new Color(0.55f, 0.5f, 0.5f, 1) : def.Color;
+            var roomArt = Icons.RoomArt(def.Type);
+            bool pictured = roomArt != null;
+            var dim = broken ? new Color(0.6f, 0.6f, 0.6f, 1) : Color.white;
+            // С картинкой подложка тёмная (у картинки прозрачные уголки), без неё — цвет комнаты.
+            body.color = pictured ? RoomDatabase.Hex("2a1f1a") : broken ? def.Color * new Color(0.55f, 0.5f, 0.5f, 1) : def.Color;
+            floor.enabled = !pictured;
+            art.sprite = roomArt;
+            art.enabled = pictured;
+            art.color = dim;
+            walls.enabled = pictured && walls.sprite != null;
+            walls.color = dim;
             icon.sprite = Icons.Room(def.Type);
-            icon.enabled = true;
-            icon.color = broken ? new Color(0.6f, 0.6f, 0.6f, 1) : Color.white;
+            icon.enabled = !pictured;
+            icon.color = dim;
+            if (labelBg != null) labelBg.enabled = pictured;
             crack.enabled = broken;
             if (label != null) label.text = broken ? "<color=#ff9a5e>Сломано</color>" : def.Name;
             for (int i = 0; i < 4; i++) doors[i].enabled = d.Has(DoorsUtil.All[i]);
@@ -168,13 +220,16 @@ namespace CardHome
             {
                 IsValid = valid;
                 slot.DOKill();
-                slot.color = valid ? ValidColor : SlotColor;
+                slot.color = slotArt != null ? (valid ? SlotValidTint : SlotTint) : valid ? ValidColor : SlotColor;
                 // Свободные клетки, куда можно строить, мягко пульсируют.
                 if (valid)
                     slot.DOFade(0.45f, 0.45f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(slot.gameObject);
             }
             shadow.enabled = body.enabled = false;
             icon.enabled = false;
+            art.enabled = false;
+            walls.enabled = false;
+            if (labelBg != null) labelBg.enabled = false;
             crack.enabled = false;
             badge.gameObject.SetActive(false);
             if (label != null) label.text = "";

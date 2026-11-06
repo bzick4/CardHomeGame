@@ -36,7 +36,8 @@ namespace CardHome
             p == Phase.Night || p == Phase.Summary ? 1 : p == Phase.Reward ? 0.5f : 0;
 
         // Ночное небо: градиент, луна и мерцающие звёзды. Плавно проявляется целиком.
-        void BuildNightSky()
+        // Если у дома свой фон (на нём уже ночь и луна) — вместо неба только тёмная дымка и звёзды.
+        void BuildNightSky(bool overLocation = false)
         {
             var layer = UIKit.Rect("Night", transform);
             UIKit.Stretch(layer);
@@ -44,16 +45,25 @@ namespace CardHome
             nightGroup.blocksRaycasts = false;
             nightGroup.alpha = NightAlpha(game.State);
 
-            var sky = UIKit.Image("Sky", layer, Color.white, Sprites.NightBackground);
-            sky.raycastTarget = false;
-            UIKit.Stretch(sky.rectTransform);
+            if (overLocation)
+            {
+                var haze = UIKit.Image("Haze", layer, new Color(0.04f, 0.05f, 0.16f, 0.45f));
+                haze.raycastTarget = false;
+                UIKit.Stretch(haze.rectTransform);
+            }
+            else
+            {
+                var sky = UIKit.Image("Sky", layer, Color.white, Sprites.NightBackground);
+                sky.raycastTarget = false;
+                UIKit.Stretch(sky.rectTransform);
 
-            var moonGlow = UIKit.Image("MoonGlow", layer, new Color(1, 0.95f, 0.75f, 0.25f), Sprites.Light);
-            moonGlow.raycastTarget = false;
-            UIKit.Place(moonGlow.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-170, -150), new Vector2(360, 360));
-            var moon = UIKit.Image("Moon", layer, RoomDatabase.Hex("fff3c4"), Sprites.Circle);
-            moon.raycastTarget = false;
-            UIKit.Place(moon.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-170, -150), new Vector2(110, 110));
+                var moonGlow = UIKit.Image("MoonGlow", layer, new Color(1, 0.95f, 0.75f, 0.25f), Sprites.Light);
+                moonGlow.raycastTarget = false;
+                UIKit.Place(moonGlow.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-170, -150), new Vector2(360, 360));
+                var moon = UIKit.Image("Moon", layer, RoomDatabase.Hex("fff3c4"), Sprites.Circle);
+                moon.raycastTarget = false;
+                UIKit.Place(moon.rectTransform, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-170, -150), new Vector2(110, 110));
+            }
 
             var rnd = new System.Random(42);
             for (int i = 0; i < 40; i++)
@@ -177,8 +187,7 @@ namespace CardHome
         {
             get
             {
-                float board = L.Step * (HouseGrid.Width - 1) + L.Cell + 44;
-                return new Vector2(CellPos(new Vector2Int(2, 0)).x, BoardY - board / 2 - 12 - GuestCard.H * PorchScale / 2);
+                return new Vector2(CellPos(new Vector2Int(2, 0)).x, BoardY - BoardBelow - 12 - GuestCard.H * PorchScale / 2);
             }
         }
 
@@ -189,9 +198,21 @@ namespace CardHome
             var size = new Vector2(GuestCard.W, GuestCard.H) * PorchScale;
             UIKit.Place(porchSlot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), PorchPos, size);
 
-            var mat = UIKit.Image("Mat", porchSlot, new Color(0.2f, 0.12f, 0.08f, 0.55f), Sprites.Soft);
-            mat.raycastTarget = false;
-            UIKit.Stretch(mat.rectTransform, -6);
+            var porchArt = BoardArt("Porch");
+            if (porchArt != null)
+            {
+                // Нарисованное крыльцо: ступени от двери прихожей, коврик — под картой гостя.
+                var porch = UIKit.Image("PorchArt", porchSlot, Color.white, porchArt);
+                porch.raycastTarget = false;
+                porch.preserveAspect = true;
+                UIKit.Place(porch.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 4), new Vector2(size.x * 1.6f, size.y * 1.1f));
+            }
+            else
+            {
+                var mat = UIKit.Image("Mat", porchSlot, new Color(0.2f, 0.12f, 0.08f, 0.55f), Sprites.Soft);
+                mat.raycastTarget = false;
+                UIKit.Stretch(mat.rectTransform, -6);
+            }
             var edge = UIKit.Image("Edge", porchSlot, new Color(1, 0.83f, 0.3f, 0.8f), Sprites.Frame);
             edge.raycastTarget = false;
             UIKit.Stretch(edge.rectTransform, -6);
@@ -350,6 +371,8 @@ namespace CardHome
                 guestLight.color = g.IsThreat ? new Color(1, 0.45f, 0.35f, 0.4f) : new Color(1, 0.85f, 0.5f, 0.4f);
                 UpdateMood(g, mood);
                 Sfx.Knock();
+                // Призраки появляются из дымки.
+                if (IsGhost(g)) Burst(gridRoot, "GhostSmoke", outside, L.Cell * 1.1f, 0.3f, 1.1f);
             });
             seq.Append(guestVisual.DOScale(1, 0.25f).From(0.2f).SetEase(Ease.OutBack));
             seq.AppendInterval(0.2f);
@@ -363,10 +386,16 @@ namespace CardHome
                 {
                     mood += s.Delta;
                     UpdateMood(g, mood);
-                    if (s.Delta != 0) FloatingNumber(s.Delta);
+                    if (s.Delta != 0)
+                    {
+                        FloatingNumber(s.Delta);
+                        BurstAtGuest(s.Delta > 0 ? "MoodUp" : "MoodDown", 0.75f);
+                    }
                     if (s.Trap)
                     {
                         Sfx.Trap();
+                        BurstAtGuest("Shield", 0.9f, 0.15f);
+                        BurstAtGuest("Dust", 1.1f, 0.05f);
                         guestVisual.DOShakeAnchorPos(0.4f, 12, 30).SetLink(guestVisual.gameObject);
                     }
                     if (!string.IsNullOrEmpty(s.Text)) game?.AddLog(s.Text);
@@ -375,6 +404,12 @@ namespace CardHome
             }
 
             AppendHop(seq, outside, 0.3f, false);
+            // Итог гостя у двери: золото — монеты, плюс к репутации — сердце.
+            seq.AppendCallback(() =>
+            {
+                if (res.Gold > 0) Burst(gridRoot, "Coins", outside, L.Cell * 0.9f, 0.5f, 1f);
+                if (res.Reputation > 0) Burst(gridRoot, "Heart", outside + new Vector2(L.Cell * 0.5f, 0), L.Cell * 0.9f, 0.5f, 1f);
+            });
             seq.Append(guestVisual.DOScale(0.2f, 0.15f).SetEase(Ease.InBack));
             seq.AppendCallback(() => guestToken.gameObject.SetActive(false));
         }

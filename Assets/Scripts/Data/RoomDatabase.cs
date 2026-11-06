@@ -28,7 +28,7 @@ namespace CardHome
     {
         // Практический потолок, чтобы числа не переполнились. В игре до него не дойти.
         public const int MaxLevel = 999;
-        static readonly string[] Names = { "", "Обычная", "Бронза", "Серебро", "Золото", "Алмаз", "Рубин", "Изумруд", "Эпичная", "Легендарная" };
+        static readonly string[] Names = { "", "Обычная", "Бронза", "Серебро", "Золото", "Изумруд", "Сапфир", "Аметист", "Рубин", "Легендарная" };
 
         public static string LevelName(int level) =>
             level < Names.Length ? Names[Mathf.Max(1, level)] : $"{Names[Names.Length - 1]} +{level - Names.Length + 1}";
@@ -36,8 +36,8 @@ namespace CardHome
         // Какая окантовка (из рубашек) у карты этого уровня: 0 — бронза … последняя — легендарная, дальше она же.
         public static int FrameTier(int level) => Mathf.Clamp(level - 1, 0, 8);
 
-        public RoomType Type;
-        public int Level;
+        public RoomType Type { get; init; }
+        public int Level { get; private set; }
 
         public Card(RoomType type, int level = 1)
         {
@@ -62,11 +62,11 @@ namespace CardHome
 
     public class RoomDef
     {
-        public RoomType Type;
-        public string Name;
-        public string Description;
-        public Doors Doors;
-        public Color Color;
+        public RoomType Type { get; init; }
+        public string Name { get; init; }
+        public string Description { get; init; }
+        public Doors Doors { get; init; }
+        public Color Color { get; init; }
 
         // Коридоры не тратят выносливость гостя.
         public bool IsPassage => Type == RoomType.Corridor || Type == RoomType.Crossroad || Type == RoomType.Hall;

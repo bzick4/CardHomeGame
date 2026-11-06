@@ -74,37 +74,72 @@ namespace CardHome
         void BuildRunMap()
         {
             mapRoot = MenuScreen("RunMap", out mapContent);
-            RoundButton(mapContent, MenuArt.BackIcon, new Vector2(-445, 870), () => game?.ShowMenu(), 110);
-            WoodSign(mapContent, "СТРАНСТВИЕ", 850, 640, 130, L.StatsFont + 22);
-            mapStats = Ribbon(mapContent, "", 735, 700);
-
-            var paperRoot = UIKit.Rect("Map", mapContent);
-            UIKit.Place(paperRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -20), new Vector2(960, 1260));
-            var scroll = MenuArt.WanderArt("MapBackground");
-            if (scroll != null)
+            // Своя карта (Art/Wander/MapBackground или …Wide) — на весь экран, вписана целиком;
+            // точки ставятся в долях картинки. Нет картинки — прежний пергамент с валиками.
+            bool wide = !L.Portrait;
+            var art = MenuArt.WanderArt(wide ? "MapBackgroundWide" : "MapBackground");
+            if (art == null) { wide = !wide; art = MenuArt.WanderArt(wide ? "MapBackgroundWide" : "MapBackground"); }
+            wanderFrac = art != null;
+            wanderWide = wide;
+            if (art != null)
             {
-                // Свой свиток (с брёвнами и пейзажем): чуть шире, чтобы брёвна выходили за края.
-                var img = UIKit.Image("Scroll", paperRoot, Color.white, scroll);
+                var area = UIKit.Rect("MapArt", mapRoot);
+                area.SetSiblingIndex(mapContent.GetSiblingIndex()); // над фоном меню, под интерфейсом
+                UIKit.Stretch(area);
+                var img = UIKit.Image("Map", area, Color.white, art);
                 img.raycastTarget = false;
-                img.preserveAspect = true;
-                UIKit.Stretch(img.rectTransform, -50);
+                UIKit.Stretch(img.rectTransform);
+                var fit = img.gameObject.AddComponent<AspectRatioFitter>();
+                // Карта заполняет весь экран (лишнее по краям обрезается — точки стоят далеко от краёв).
+                fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fit.aspectRatio = art.rect.width / art.rect.height;
+                mapNodes = UIKit.Rect("Nodes", img.rectTransform);
+                UIKit.Stretch(mapNodes);
             }
             else
             {
+                var paperRoot = UIKit.Rect("Map", mapContent);
+                UIKit.Place(paperRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -20), new Vector2(960, 1260));
                 UIKit.DropShadow(paperRoot, new Vector2(0, -14), 0.5f);
                 var paper = UIKit.Image("Paper", paperRoot, Color.white, GuestArt.MapPaper);
                 paper.raycastTarget = false;
                 UIKit.Stretch(paper.rectTransform);
                 Roller(mapContent, 630);
                 Roller(mapContent, -670);
+                mapNodes = UIKit.Rect("Nodes", paperRoot);
+                UIKit.Stretch(mapNodes);
             }
 
-            mapNodes = UIKit.Rect("Nodes", paperRoot);
-            UIKit.Stretch(mapNodes);
+            // Шапка. На своей карте наверху крепость с боссом — вывеску не ставим, лента с сердцами
+            // и золотом поднимается к кнопке «назад».
+            // На своей карте шапка и кнопки прижаты к краям экрана (карта занимает его целиком).
+            var top = wanderFrac ? EdgeFrame(mapRoot, true) : mapContent;
+            var bottom = wanderFrac ? EdgeFrame(mapRoot, false) : mapContent;
+            RoundButton(top, MenuArt.BackIcon, new Vector2(-445, 870), () => game?.ShowMenu(), 110);
+            if (wanderFrac)
+                mapStats = Ribbon(top, "", 870, 760, 60);
+            else
+            {
+                WoodSign(mapContent, "СТРАНСТВИЕ", 850, 640, 130, L.StatsFont + 22);
+                mapStats = Ribbon(mapContent, "", 735, 700);
+            }
 
             var size = new Vector2(470, 130);
-            deckBtn = MakeMenuButton(mapContent, MenuWood, "Колода", new Vector2(-250, -820), size, OpenDeckView);
-            abandonBtn = MakeMenuButton(mapContent, SkipColor, "Сдаться", new Vector2(250, -820), size, OnAbandon);
+            deckBtn = MakeMenuButton(bottom, MenuWood, "Колода", new Vector2(-250, -820), size, OpenDeckView);
+            abandonBtn = MakeMenuButton(bottom, SkipColor, "Сдаться", new Vector2(250, -820), size, OnAbandon);
+        }
+
+        // Рамка 1080×1920 в масштабе экранов меню, прижатая к верху или низу экрана:
+        // координаты внутри — как в обычном Content, но край совпадает с краем экрана.
+        RectTransform EdgeFrame(RectTransform screen, bool atTop)
+        {
+            var f = UIKit.Rect(atTop ? "Top" : "Bottom", screen);
+            var a = new Vector2(0.5f, atTop ? 1 : 0);
+            f.anchorMin = f.anchorMax = f.pivot = a;
+            f.anchoredPosition = Vector2.zero;
+            f.sizeDelta = new Vector2(1080, 1920);
+            f.localScale = Vector3.one * OverlayScale;
+            return f;
         }
 
         void OnAbandon()
@@ -119,10 +154,39 @@ namespace CardHome
             game?.AbandonWander();
         }
 
+        bool wanderFrac, wanderWide; // точки в долях своей картинки карты (и какой — вертикальной или широкой)
+
+        // Где стоит точка. На своей карте — доля картинки (x слева, y снизу): ряды идут снизу вверх
+        // по дороге к крепости, босс — в её воротах. На пергаменте — смещение от центра в единицах интерфейса.
         Vector2 NodePos(MapNode n)
         {
-            float y = -540 + n.Row * (1110f / (RunMap.Rows - 1));
-            return new Vector2(n.X * 360, y);
+            if (!wanderFrac)
+            {
+                float y = -540 + n.Row * (1110f / (RunMap.Rows - 1));
+                return new Vector2(n.X * 360, y);
+            }
+            float t = n.Row / (float)(RunMap.Rows - 1);
+            float fromTop = wanderWide ? Mathf.Lerp(0.84f, 0.19f, t) : Mathf.Lerp(0.80f, 0.135f, t);
+            float x = n.Kind == NodeKind.Boss
+                ? (wanderWide ? 0.512f : 0.555f)
+                : 0.5f + n.X * (wanderWide ? 340f / 1920f : 360f / 1080f);
+            return new Vector2(x, 1 - fromTop);
+        }
+
+        // Размер картинки карты в единицах интерфейса (для расстояний между точками тропы).
+        Vector2 MapUnits => wanderWide ? new Vector2(1920, 1080) : new Vector2(1080, 1920);
+
+        // Поставить элемент в точку карты.
+        void PutOnMap(RectTransform rt, Vector2 pos, Vector2 size)
+        {
+            if (wanderFrac)
+            {
+                rt.anchorMin = rt.anchorMax = pos;
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta = size;
+            }
+            else UIKit.Place(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
         }
 
         void RefreshRunMap()
@@ -148,15 +212,15 @@ namespace CardHome
                 bool open = game.CurrentNode == a && game.CanEnter(b);
                 var pa = NodePos(a);
                 var pb = NodePos(b);
-                int n = Mathf.Max(2, Mathf.RoundToInt((pb - pa).magnitude / 32));
+                var dist = wanderFrac ? Vector2.Scale(pb - pa, MapUnits) : pb - pa;
+                int n = Mathf.Max(2, Mathf.RoundToInt(dist.magnitude / 32));
                 // Светлый пунктир тропы; пройденная — золотая, куда можно пойти — ярче и крупнее.
                 var color = walked ? RoomDatabase.Hex("ffcf3a") : open ? RoomDatabase.Hex("fff1cf") : RoomDatabase.Hex("e8d4a6");
                 for (int k = 1; k < n; k++)
                 {
                     var dot = UIKit.Image("Dot", mapNodes, open || walked ? color : new Color(color.r, color.g, color.b, 0.75f), Sprites.Circle);
                     dot.raycastTarget = false;
-                    UIKit.Place(dot.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.Lerp(pa, pb, k / (float)n),
-                        Vector2.one * (open ? 20 : walked ? 18 : 14));
+                    PutOnMap(dot.rectTransform, Vector2.Lerp(pa, pb, k / (float)n), Vector2.one * (open ? 20 : walked ? 18 : 14));
                     if (open)
                         dot.rectTransform.DOScale(1.25f, 0.45f).SetDelay(k * 0.08f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine)
                             .SetLink(dot.gameObject);
@@ -180,7 +244,9 @@ namespace CardHome
             var size = new Vector2(150, 150) * k;
 
             var node = UIKit.Rect("Node", mapNodes);
-            UIKit.Place(node, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), NodePos(n), size);
+            PutOnMap(node, NodePos(n), size);
+            // На широкой карте ряды теснее — точки мельче.
+            if (wanderFrac && wanderWide) node.localScale = Vector3.one * 0.72f;
 
             if (reachable || boss)
             {
@@ -218,10 +284,18 @@ namespace CardHome
                     disc.raycastTarget = false;
                     UIKit.Stretch(disc.rectTransform, -6);
                 }
-                var icon = UIKit.Image("Sprite", holder, tint, n.Kind == NodeKind.Event ? MenuArt.EventBanner : NodeIcon(n));
-                icon.raycastTarget = false;
-                icon.preserveAspect = true;
-                UIKit.Stretch(icon.rectTransform);
+                if (n.Kind == NodeKind.House)
+                {
+                    // Дом — маленькая круглая картинка этого дома на постаменте.
+                    HouseDisc(holder, HouseDatabase.All[n.House], !visited, Vector2.zero, size.x * 0.66f);
+                }
+                else
+                {
+                    var icon = UIKit.Image("Sprite", holder, tint, n.Kind == NodeKind.Event ? MenuArt.EventBanner : NodeIcon(n));
+                    icon.raycastTarget = false;
+                    icon.preserveAspect = true;
+                    UIKit.Stretch(icon.rectTransform);
+                }
                 if (n.Kind == NodeKind.Event)
                 {
                     var q = UIKit.Outlined(UIKit.Text(holder, "?", Mathf.RoundToInt(size.x * 0.32f), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 3);
@@ -276,19 +350,6 @@ namespace CardHome
                 Sfx.Click();
                 game?.EnterNode(r, c);
             });
-        }
-
-        static Color NodeColor(MapNode n)
-        {
-            switch (n.Kind)
-            {
-                case NodeKind.Fair: return FairColor;
-                case NodeKind.Boss: return BossColor;
-                case NodeKind.Rest: return RoomDatabase.Hex("c4553f");
-                case NodeKind.Event: return RoomDatabase.Hex("3f8a9a");
-                case NodeKind.Elite: return RoomDatabase.Hex("8f2b2b");
-                default: return HouseDatabase.All[n.House].Color;
-            }
         }
 
         static Sprite NodeIcon(MapNode n)

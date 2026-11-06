@@ -17,9 +17,10 @@ namespace CardHome
         public static Sprite House(HouseDef h) => Get("Houses/" + h.Id, () => PaintRoom(h.IconRoom));
         // Трещины для сломанной комнаты (полупрозрачные, поверх иконки).
         public static Sprite Crack => Get("Crack", PaintCrack);
-        // Нарисованный бланк карты комнаты: Assets/Resources/Art/RoomCards/<Тип>.png (без текста — его пишет игра).
-        // Нет картинки — null, и карта рисуется кодом, как раньше.
-        public static Sprite RoomCard(RoomType t) => ArtStore.Get("RoomCards/" + t, null);
+        // Картинка комнаты для лица карты: Art/RoomArt/<Тип>.png (квадрат с прозрачными углами). Нет — null.
+        public static Sprite RoomArt(RoomType t) => ArtStore.Get("RoomArt/" + t, null);
+        // Пергамент под описание (растягивается по 9 частям). Нет — null.
+        public static Sprite TextPanel => ArtStore.Get("Cards/TextPanel", null);
 
         public static Sprite Coin => Get("Coin", () => new Painter().Circle(0, 0, 0.8f, Gold).Circle(0, 0, 0.5f, H("ffe27a"), false).Box(0, 0, 0.12f, 0.36f, 0.05f, H("e0a91f"), false));
 
@@ -308,9 +309,9 @@ namespace CardHome
     {
         struct Shape
         {
-            public Func<Vector2, float> Sdf;
-            public Color Color;
-            public bool Outline;
+            public Func<Vector2, float> Sdf { get; init; }
+            public Color Color { get; init; }
+            public bool Outline { get; init; }
         }
 
         const float OutlineWidth = 0.075f;
