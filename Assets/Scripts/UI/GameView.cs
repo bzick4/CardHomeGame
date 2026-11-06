@@ -892,11 +892,12 @@ namespace CardHome
             ribbon.raycastTarget = false;
             FacePx(ribbon.rectTransform, compact ? 9 : 13, rt0, compact ? 291 : 287, rt1);
             string title = level > 1 ? $"{def.Name} {HouseDatabase.Roman(level)}" : def.Name;
-            int nameMax = compact ? Mathf.Max(L.CardNameFont, Mathf.RoundToInt(40 * k)) : Mathf.RoundToInt(22 * k);
+            // В руке: крупно, но длинные названия («Сокровищница», «Библиотека») ужимаются, чтобы влезть в ленту.
+            int nameMax = compact ? Mathf.RoundToInt(L.CardNameFont * 0.85f) : Mathf.RoundToInt(22 * k);
             var name = UIKit.Outlined(UIKit.Text(area, title, nameMax, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
             FacePx(name.rectTransform, compact ? 14 : 22, rt0 - 1, compact ? 286 : 278, rt1 + 1);
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = compact ? L.MinFont : Mathf.Max(8, Mathf.RoundToInt(12 * k));
+            name.resizeTextMinSize = compact ? Mathf.RoundToInt(L.CardNameFont * 0.65f) : Mathf.Max(8, Mathf.RoundToInt(12 * k));
             name.resizeTextMaxSize = nameMax;
 
             DoorScheme scheme;
