@@ -120,7 +120,7 @@ namespace CardHome
             // Солнце: сколько настроения нужно (у угроз — награда за поимку).
             // Луна: выносливость; у угроз вместо неё сердце — сколько репутации стоит упустить.
             Stat(front, GuestArt.Sun, g.IsThreat ? "+" + g.CatchReward : g.Need.ToString(), 64, 214);
-            var heart = ArtStore.Get("UI/Heart", null);
+            var heart = ArtStore.Get("UI/Icons/Heart", null);
             if (g.IsThreat) Stat(front, heart != null ? heart : GuestArt.Moon, "−" + g.UnhappyPenalty, 236, 214);
             else Stat(front, GuestArt.Moon, g.Stamina.ToString(), 236, 214);
 
