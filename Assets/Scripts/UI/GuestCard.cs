@@ -142,11 +142,12 @@ namespace CardHome
             name.resizeTextMaxSize = 22;
 
             // Описание — в безопасной зоне пергамента (~30 от боков, ~60 от низа).
-            var desc = UIKit.Text(front, g.Description, 17, TextAnchor.MiddleCenter, Ink, FontStyle.Bold);
+            // На карте — короткая подпись; правила гостя — в крупном просмотре.
+            var desc = UIKit.Text(front, g.Tagline, 20, TextAnchor.MiddleCenter, Ink, FontStyle.Italic);
             Px(desc.rectTransform, 30, 280, 270, 360);
             desc.resizeTextForBestFit = true;
             desc.resizeTextMinSize = 10;
-            desc.resizeTextMaxSize = 17;
+            desc.resizeTextMaxSize = 20;
 
             CardBacks.AddFrame(front, tier);
             return front;

@@ -64,7 +64,8 @@ namespace CardHome
     {
         public RoomType Type { get; init; }
         public string Name { get; init; }
-        public string Description { get; init; }
+        public string Description { get; init; } // правила — в крупном просмотре карты
+        public string Tagline { get; init; }     // 3–5 слов на самой карте
         public Doors Doors { get; init; }
         public Color Color { get; init; }
 
@@ -111,9 +112,28 @@ namespace CardHome
                 Doors.E | Doors.S | Doors.W, Hex("5f9e6e"));
         }
 
+        // Короткая подпись на карте (атмосфера, без цифр). Правила — в Description, их видно в просмотре.
+        static readonly Dictionary<RoomType, string> Taglines = new Dictionary<RoomType, string>
+        {
+            [RoomType.Hall] = "Здесь начинается обход",
+            [RoomType.Corridor] = "Проход, где не устают",
+            [RoomType.Crossroad] = "Четыре пути сразу",
+            [RoomType.Kitchen] = "Пахнет супом и пирогами",
+            [RoomType.Dining] = "Ужин для всех гостей",
+            [RoomType.Bedroom] = "Мягкая постель до утра",
+            [RoomType.Bath] = "Горячая вода и пена",
+            [RoomType.Library] = "Тишина и старые книги",
+            [RoomType.Fireplace] = "Тепло на весь дом",
+            [RoomType.Cellar] = "Сыро, темно, бочки",
+            [RoomType.Trap] = "Капкан для незваных",
+            [RoomType.Treasury] = "Золото под замком",
+            [RoomType.Nursery] = "Игрушки и колыбель",
+            [RoomType.Lounge] = "Мягкие кресла и чай",
+        };
+
         static void Add(RoomType t, string name, string desc, Doors doors, Color c)
         {
-            Defs[t] = new RoomDef { Type = t, Name = name, Description = desc, Doors = doors, Color = c };
+            Defs[t] = new RoomDef { Type = t, Name = name, Description = desc, Doors = doors, Color = c, Tagline = Taglines[t] };
         }
 
         public static RoomDef Get(RoomType t) => Defs[t];

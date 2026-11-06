@@ -17,7 +17,8 @@ namespace CardHome
         public string Id { get; init; } // для файлов арта: Art/Guests/<Id>.png
         string name;
         public string Name { get => name; init => name = value; }
-        public string Description { get; init; }
+        public string Description { get; init; } // правила — в крупном просмотре карты
+        public string Tagline { get; init; }     // 3–5 слов на самой карте
         public Color Color { get; init; }
         public GuestBehaviour Behaviour { get; init; }
         public int Stamina { get; init; }     // сколько комнат (не коридоров) успеет обойти
@@ -79,6 +80,7 @@ namespace CardHome
         public static readonly GuestDef Traveler = new GuestDef
         {
             Id = "Traveler",
+            Tagline = "Устал с дальней дороги",
             Name = "Путник",
             Description = "Хочет поесть и выспаться. Выносливость 4, нужно настроение 4.",
             Color = RoomDatabase.Hex("e0c27a"),
@@ -92,6 +94,7 @@ namespace CardHome
         public static readonly GuestDef Scholar = new GuestDef
         {
             Id = "Scholar",
+            Tagline = "Ищет редкие книги",
             Name = "Учёный",
             Description = "Ищет книги, не любит детей. Выносливость 5, нужно настроение 6.",
             Color = RoomDatabase.Hex("a99be0"),
@@ -109,6 +112,7 @@ namespace CardHome
         public static readonly GuestDef Ghost = new GuestDef
         {
             Id = "Ghost",
+            Tagline = "Бродит сквозь стены",
             Name = "Призрак",
             Description = "Бродит случайно, сквозь ловушки. Не любит тепло. Выносливость 4, нужно 3.",
             Color = RoomDatabase.Hex("d8e8f0"),
@@ -123,6 +127,7 @@ namespace CardHome
         public static readonly GuestDef Thief = new GuestDef
         {
             Id = "Thief",
+            Tagline = "Охотится за чужим золотом",
             Name = "Вор",
             Description = "Кратчайшим путём идёт к сокровищнице. Поймай ловушкой — +5 золота.",
             Color = RoomDatabase.Hex("555a66"),
@@ -136,6 +141,7 @@ namespace CardHome
         public static readonly GuestDef Wolf = new GuestDef
         {
             Id = "Wolf",
+            Tagline = "Голоден и очень зол",
             Name = "Волк",
             Description = "Кратчайшим путём бежит на кухню. Поймай ловушкой — +4 золота.",
             Color = RoomDatabase.Hex("9a8c80"),
@@ -150,6 +156,7 @@ namespace CardHome
         public static readonly GuestDef Inspector = new GuestDef
         {
             Id = "Inspector",
+            Tagline = "Проверит каждую мелочь",
             Name = "Инспектор",
             Description = "Обходит всё подряд (+1 за комнату), но −1 за каждую дверь за край дома. Нужно 5.",
             Color = RoomDatabase.Hex("4f6b8a"),
@@ -164,6 +171,7 @@ namespace CardHome
         public static readonly GuestDef Couple = new GuestDef
         {
             Id = "Couple",
+            Tagline = "Ищут уютный вечер",
             Name = "Влюблённые",
             Description = "Спальня +3, ванная +2, спальня рядом с ванной ещё +2. Платят вдвое. Нужно 6.",
             Color = RoomDatabase.Hex("e57b9a"),
@@ -180,6 +188,7 @@ namespace CardHome
         public static readonly GuestDef Drunkard = new GuestDef
         {
             Id = "Drunkard",
+            Tagline = "Весёлый, шумный, неловкий",
             Name = "Пьяница",
             Description = "Шатается куда попало, любит кухню и столовую. Может что-нибудь сломать. Нужно 2.",
             Color = RoomDatabase.Hex("b5654a"),
@@ -194,6 +203,7 @@ namespace CardHome
         public static readonly GuestDef GhostLord = new GuestDef
         {
             Id = "GhostLord",
+            Tagline = "Настоящий хозяин дома",
             Name = "Хозяин дома",
             Description = "БОСС. Призрак-хозяин: сквозь ловушки, не любит тепло. Нужно 8. Недоволен — репутация −2.",
             Color = RoomDatabase.Hex("8fd3c8"),

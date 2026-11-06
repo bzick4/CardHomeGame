@@ -919,11 +919,11 @@ namespace CardHome
             else
             {
                 // Описание — в безопасной зоне пергамента: ~30 от боков и ~60 от низа (там камни богатых рамок).
-                var desc = UIKit.Text(area, def.Description, Mathf.RoundToInt(17 * k), TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+                var desc = UIKit.Text(area, def.Tagline, Mathf.RoundToInt(19 * k), TextAnchor.MiddleCenter, InkBrown, FontStyle.Italic);
                 FacePx(desc.rectTransform, 30, 280, 270, 360);
                 desc.resizeTextForBestFit = true;
                 desc.resizeTextMinSize = Mathf.Max(7, Mathf.RoundToInt(10 * k));
-                desc.resizeTextMaxSize = Mathf.RoundToInt(17 * k);
+                desc.resizeTextMaxSize = Mathf.RoundToInt(19 * k);
 
                 scheme = new DoorScheme(area, 48 * k);
                 scheme.Root.anchorMin = scheme.Root.anchorMax = new Vector2(214 / FaceW, 1 - 94 / FaceH);
