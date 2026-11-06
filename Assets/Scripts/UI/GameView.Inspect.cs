@@ -174,22 +174,22 @@ namespace CardHome
             inspectInfoGroup.alpha = 0;
             inspectInfoGroup.blocksRaycasts = false;
 
-            var name = UIKit.Outlined(UIKit.Text(inspectInfo, title, Mathf.Max(48, L.StatsFont + 4), TextAnchor.MiddleCenter, Gold, FontStyle.Bold));
+            var name = UIKit.Outlined(UIKit.Text(inspectInfo, title, Mathf.Max(48, C.StatsFont + 4), TextAnchor.MiddleCenter, Gold, FontStyle.Bold));
             UIKit.TopBand(name.rectTransform, 22, 70, 30);
             name.resizeTextForBestFit = true;
             name.resizeTextMinSize = 40;
-            name.resizeTextMaxSize = Mathf.Max(48, L.StatsFont + 4);
+            name.resizeTextMaxSize = Mathf.Max(48, C.StatsFont + 4);
 
-            var body = UIKit.Text(inspectInfo, text, Mathf.Max(36, L.BodyFont + 2), TextAnchor.UpperCenter, Cream, FontStyle.Bold);
+            var body = UIKit.Text(inspectInfo, text, Mathf.Max(36, C.BodyFont + 2), TextAnchor.UpperCenter, Cream, FontStyle.Bold);
             body.rectTransform.anchorMin = Vector2.zero;
             body.rectTransform.anchorMax = Vector2.one;
             body.rectTransform.offsetMin = new Vector2(36, 70);
             body.rectTransform.offsetMax = new Vector2(-36, -104);
             body.resizeTextForBestFit = true;
             body.resizeTextMinSize = 34;
-            body.resizeTextMaxSize = Mathf.Max(36, L.BodyFont + 2);
+            body.resizeTextMaxSize = Mathf.Max(36, C.BodyFont + 2);
 
-            var hint = UIKit.Text(inspectInfo, "Коснись, чтобы закрыть", Mathf.Max(32, L.BodyFont - 2), TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.6f));
+            var hint = UIKit.Text(inspectInfo, "Коснись, чтобы закрыть", Mathf.Max(32, C.BodyFont - 2), TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.6f));
             UIKit.Place(hint.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 14), new Vector2(900, 52));
         }
 

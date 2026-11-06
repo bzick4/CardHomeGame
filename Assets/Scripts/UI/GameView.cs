@@ -70,11 +70,13 @@ namespace CardHome
             MinFont = 31, PanelShare = 0.34f, PanelScale = 1.45f, // 31 единица = 11 pt при высоте 390 pt
         };
 
-        // Какой макет подходит экрану. Телефон в горизонтали узнаём по короткой стороне (если браузер сообщает dpi)
-        // или по вытянутости экрана: у телефонов ~2:1 и больше, у планшетов и мониторов — до 16:9.
+        // Какой макет подходит экрану. Телефонный горизонтальный — только на мобильном устройстве
+        // (в браузере телефона или с сенсорным экраном): на ПК окно тоже бывает низким, но там нужны обычные шрифты.
         public static Layout For(int width, int height, float dpi)
         {
             if (height >= width) return PortraitLayout;
+            bool mobile = Application.isMobilePlatform || UnityEngine.InputSystem.Touchscreen.current != null;
+            if (!mobile) return LandscapeLayout;
             float aspect = width / (float)Mathf.Max(1, height);
             bool shortSide = dpi > 0 && height / (dpi / 160f) < 600;
             return shortSide || aspect >= 1.9f ? LandscapePhoneLayout : LandscapeLayout;
@@ -656,6 +658,11 @@ namespace CardHome
 
         // Размер шрифта не меньше читаемого на этом экране.
         int Fs(int size) => Mathf.Max(L.MinFont, size);
+
+        // Меню, окна и оверлеи свёрстаны на своём холсте 1080×1920, который целиком масштабируется под экран, —
+        // их шрифты всегда из вертикального макета (под эти размеры рассчитаны их рамки и кнопки).
+        static Layout C => Layout.PortraitLayout;
+        int Fc(int size) => Mathf.Max(C.MinFont, size);
         internal RectTransform StatsRect => statsBar;
         internal RectTransform OpponentRect => oppRoot;
         internal RectTransform GridRect => gridRoot;

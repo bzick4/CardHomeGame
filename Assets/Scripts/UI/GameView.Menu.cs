@@ -102,7 +102,7 @@ namespace CardHome
         void BuildMenuPortrait()
         {
             float side = MenuArt.MirrorBackground ? -1 : 1;
-            WoodSign(menuContent, "ДОМ НА НОЧЬ", 820, 620, 150, L.StatsFont + 30, -side * 175);
+            WoodSign(menuContent, "ДОМ НА НОЧЬ", 820, 620, 150, C.StatsFont + 30, -side * 175);
             Ribbon(menuContent, "карточная стратегия о гостеприимстве", 700, 600, -side * 175);
 
             var size = new Vector2(480, 124);
@@ -118,7 +118,15 @@ namespace CardHome
         // Горизонтальный фон: луна слева вверху, Путник в центре, дом и вор справа.
         // Название — наверху на небе между луной и домом, кнопки — слева на ёлках и заборе, настройки — справа вверху.
         // Раскладка по всему экрану (а не по вертикальной колонке), чтобы попадать в свободные места картинки.
+        // Горизонтальное меню расставлено прямо по экрану (не на холсте 1080×1920) — шрифты из макета экрана L.
         void BuildMenuLandscape()
+        {
+            menuFonts = L;
+            BuildMenuLandscapeItems();
+            menuFonts = null;
+        }
+
+        void BuildMenuLandscapeItems()
         {
             bool mirror = MenuArt.MirrorBackground;
             RectTransform At(float x, float y)
@@ -160,7 +168,7 @@ namespace CardHome
         {
             confirmRoot = Overlay("Confirm", 0.6f, out var content);
             var box = WoodWindow(content, new Vector2(880, 560), "НОВАЯ ИГРА?");
-            var text = UIKit.Text(box, "Весь прогресс будет удалён:\nдома, звёзды, рубашки и забег.", L.BodyFont + 8, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+            var text = UIKit.Text(box, "Весь прогресс будет удалён:\nдома, звёзды, рубашки и забег.", C.BodyFont + 8, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
             UIKit.Place(text.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(780, 150));
 
             var yes = MakeMenuButton(box, RestartColor, "Начать", new Vector2(-200, -150), new Vector2(380, 120), () =>
@@ -255,7 +263,7 @@ namespace CardHome
             UIKit.DropShadow(header, new Vector2(0, -10), 0.5f);
             var plank = UIKit.Image("Plank", header, DarkWood, Sprites.Panel);
             UIKit.Stretch(plank.rectTransform);
-            levelsTitle = UIKit.Outlined(UIKit.Text(header, "", L.StatsFont + 6, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2.5f);
+            levelsTitle = UIKit.Outlined(UIKit.Text(header, "", C.StatsFont + 6, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2.5f);
             UIKit.Stretch(levelsTitle.rectTransform, 10);
             levelsTitle.rectTransform.offsetMin = new Vector2(70, 10);
             RoundButton(levelsContent, MenuArt.BackIcon, new Vector2(-440, 850), () => game?.ShowMenu(), 120);
@@ -283,7 +291,7 @@ namespace CardHome
             levelsGrid = UIKit.Rect("Nodes", levelsMap);
             UIKit.Stretch(levelsGrid);
 
-            levelsInfo = Label(levelsContent, "", L.BodyFont, Cream, -770, 90, 1000, FontStyle.Bold);
+            levelsInfo = Label(levelsContent, "", C.BodyFont, Cream, -770, 90, 1000, FontStyle.Bold);
         }
 
         void SwitchTier(int tier)
@@ -312,7 +320,7 @@ namespace CardHome
                 bool on = tier == levelsTier;
                 var color = on ? RoomDatabase.Hex("d0473c") : open ? RoomDatabase.Hex("8a5a32") : RoomDatabase.Hex("4a4038");
                 var tab = Place(UIKit.Button(levelsTabs, (open ? "" : "   ") + $"КРУГ {HouseDatabase.Roman(tier + 1)}",
-                    color, () => SwitchTier(tier), Fs(L.ButtonFont - 8)), (i - 1) * 300, 0, 280, 76);
+                    color, () => SwitchTier(tier), Fc(C.ButtonFont - 8)), (i - 1) * 300, 0, 280, 76);
                 tab.interactable = open && !on;
                 if (!open)
                 {
@@ -404,11 +412,11 @@ namespace CardHome
             var plaque = UIKit.Image("Plaque", node, DarkWood, Sprites.Panel);
             plaque.raycastTarget = false;
             UIKit.Place(plaque.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -58), new Vector2(250, 56));
-            var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", Fs(L.BodyFont - 2), TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
+            var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", Fc(C.BodyFont - 2), TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
             UIKit.Stretch(name.rectTransform, 6);
             name.resizeTextForBestFit = true;
             name.resizeTextMinSize = 22; // длинные названия («Постоялый двор») ужимаются, чтобы влезть в табличку
-            name.resizeTextMaxSize = Fs(L.BodyFont - 2);
+            name.resizeTextMaxSize = Fc(C.BodyFont - 2);
 
             if (stars > 0)
             {
@@ -429,11 +437,11 @@ namespace CardHome
                     var pill = UIKit.Image("Hint", node, new Color(0.15f, 0.12f, 0.12f, 0.85f), Sprites.Soft);
                     pill.raycastTarget = false;
                     UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -112), new Vector2(290, 44));
-                    var t = UIKit.Text(pill.transform, $"Пройди «{prev.Title}»", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
+                    var t = UIKit.Text(pill.transform, $"Пройди «{prev.Title}»", Fc(C.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
                     UIKit.Stretch(t.rectTransform, 6);
                     t.resizeTextForBestFit = true;
                     t.resizeTextMinSize = 12;
-                    t.resizeTextMaxSize = Fs(L.BodyFont - 4);
+                    t.resizeTextMaxSize = Fc(C.BodyFont - 4);
                 }
                 return;
             }
@@ -455,11 +463,11 @@ namespace CardHome
                 var pill = UIKit.Image("Saved", node, RoomDatabase.Hex("2fb5c4"), Sprites.Panel);
                 pill.raycastTarget = false;
                 UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -118), new Vector2(250, 50));
-                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"Продолжить · день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"Продолжить · день {SaveSystem.LoadRun()?.Night}", Fc(C.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
                 UIKit.Stretch(t.rectTransform, 4);
                 t.resizeTextForBestFit = true;
                 t.resizeTextMinSize = 20;
-                t.resizeTextMaxSize = Fs(L.BodyFont - 4);
+                t.resizeTextMaxSize = Fc(C.BodyFont - 4);
             }
 
             var hit = node.gameObject.AddComponent<Image>();
@@ -493,14 +501,14 @@ namespace CardHome
             UIKit.DropShadow(header, new Vector2(0, -10), 0.5f);
             var plank = UIKit.Image("Plank", header, DarkWood, Sprites.Panel);
             UIKit.Stretch(plank.rectTransform);
-            var title = UIKit.Outlined(UIKit.Text(header, "РУБАШКИ", L.StatsFont + 10, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2.5f);
+            var title = UIKit.Outlined(UIKit.Text(header, "РУБАШКИ", C.StatsFont + 10, TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2.5f);
             UIKit.Stretch(title.rectTransform, 10);
             RoundButton(backsContent, MenuArt.BackIcon, new Vector2(-440, 850), () => backsRoot.gameObject.SetActive(false), 120);
 
             // Переключатель окантовки (круга).
-            Place(UIKit.Button(backsContent, "‹", MenuButton, () => SwitchBackTier(-1), L.ButtonFont + 10), -400, 745, 110, 90);
-            Place(UIKit.Button(backsContent, "›", MenuButton, () => SwitchBackTier(1), L.ButtonFont + 10), 400, 745, 110, 90);
-            backsTierText = Label(backsContent, "", L.StatsFont + 2, Color.white, 745, 90, 640);
+            Place(UIKit.Button(backsContent, "‹", MenuButton, () => SwitchBackTier(-1), C.ButtonFont + 10), -400, 745, 110, 90);
+            Place(UIKit.Button(backsContent, "›", MenuButton, () => SwitchBackTier(1), C.ButtonFont + 10), 400, 745, 110, 90);
+            backsTierText = Label(backsContent, "", C.StatsFont + 2, Color.white, 745, 90, 640);
 
             backsGrid = UIKit.Rect("Grid", backsContent);
             UIKit.Place(backsGrid, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 300), new Vector2(1000, 700));
@@ -508,12 +516,12 @@ namespace CardHome
             // Крупный просмотр выбранной рубашки и действия.
             backsPreview = UIKit.Rect("Preview", backsContent);
             UIKit.Place(backsPreview, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-250, -360), new Vector2(300, 420));
-            backsInfo = UIKit.Outlined(UIKit.Text(backsContent, "", L.BodyFont + 4, TextAnchor.UpperLeft, Color.white, FontStyle.Bold), 2);
+            backsInfo = UIKit.Outlined(UIKit.Text(backsContent, "", C.BodyFont + 4, TextAnchor.UpperLeft, Color.white, FontStyle.Bold), 2);
             UIKit.Place(backsInfo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 1), new Vector2(-60, -150), new Vector2(540, 240));
-            backsEquip = Place(UIKit.Button(backsContent, "ВЫБРАТЬ", RestartColor, () => game?.EquipBack(previewCode), L.ButtonFont), 210, -440, 440, 110);
-            Place(UIKit.Button(backsContent, "СТРАННИК", SkipColor, () => PreviewBack(CardBacks.DefaultCode), Fs(L.ButtonFont - 6)), 210, -570, 440, 96);
+            backsEquip = Place(UIKit.Button(backsContent, "ВЫБРАТЬ", RestartColor, () => game?.EquipBack(previewCode), C.ButtonFont), 210, -440, 440, 110);
+            Place(UIKit.Button(backsContent, "СТРАННИК", SkipColor, () => PreviewBack(CardBacks.DefaultCode), Fc(C.ButtonFont - 6)), 210, -570, 440, 96);
 
-            backsTest = Place(UIKit.Button(backsContent, "", RoomDatabase.Hex("5a4632"), () => game?.ToggleTestBacks(), Fs(L.ButtonFont - 8)), 0, -800, 620, 96);
+            backsTest = Place(UIKit.Button(backsContent, "", RoomDatabase.Hex("5a4632"), () => game?.ToggleTestBacks(), Fc(C.ButtonFont - 8)), 0, -800, 620, 96);
         }
 
         void OpenBacks()
@@ -548,7 +556,7 @@ namespace CardHome
         {
             var tier = CardBacks.Tiers[backsTier];
             backsTierText.text = $"КРУГ {HouseDatabase.Roman(backsTier + 1)} · {tier.Name.ToUpper()}" +
-                                 (tier.Shimmer ? " <size=" + (Fs(L.BodyFont - 2)) + ">✦ анимация</size>" : "");
+                                 (tier.Shimmer ? " <size=" + (Fc(C.BodyFont - 2)) + ">✦ анимация</size>" : "");
 
             // Десять домов этого круга: 5 × 2.
             Clear(backsGrid);
@@ -583,7 +591,7 @@ namespace CardHome
                 }
                 if (code == game.Progress.EquippedBack) CheckBadge(slot);
 
-                var name = UIKit.Outlined(UIKit.Text(slot, HouseDatabase.All[theme].Name, Fs(L.BodyFont - 4), TextAnchor.UpperCenter, has ? Color.white : Cream, FontStyle.Bold), 2);
+                var name = UIKit.Outlined(UIKit.Text(slot, HouseDatabase.All[theme].Name, Fc(C.BodyFont - 4), TextAnchor.UpperCenter, has ? Color.white : Cream, FontStyle.Bold), 2);
                 UIKit.Place(name.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -6), new Vector2(190, 60));
 
                 var hit = slot.gameObject.AddComponent<Image>();
@@ -614,7 +622,7 @@ namespace CardHome
                     ? "<color=#8be36f>Получена</color>" : "<color=#ffb03a>Открыта в тест-режиме</color>")
                 : $"<color=#ff9a5e>🔒 {CardBacks.Condition(previewCode)}</color>";
             backsInfo.text = $"<color=#ffd34d>{CardBacks.Name(previewCode)}</color>\n{status}\n\n" +
-                             $"<size={Fs(L.BodyFont - 2)}>Собрано на этом круге: {owned}/{CardBacks.ThemeCount}\n" +
+                             $"<size={Fc(C.BodyFont - 2)}>Собрано на этом круге: {owned}/{CardBacks.ThemeCount}\n" +
                              $"Соперник в этом доме играет такой рубашкой.</size>";
             backsInfo.text = backsInfo.text.Replace("🔒 ", "");
             SetLabel(backsEquip, equipped ? "ВЫБРАНА" : "ВЫБРАТЬ");

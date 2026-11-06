@@ -171,7 +171,7 @@ namespace CardHome
             UIKit.Stretch(body.rectTransform);
 
             string title = game.IsTutorial ? "ИТОГИ НОЧИ 0" : $"ИТОГИ НОЧИ {game.Night}";
-            var t = UIKit.Outlined(UIKit.Text(summaryPanel, title, L.StatsFont + 16, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
+            var t = UIKit.Outlined(UIKit.Text(summaryPanel, title, C.StatsFont + 16, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
             UIKit.TopBand(t.rectTransform, 30, 100);
 
             var items = new List<RectTransform>();
@@ -190,14 +190,14 @@ namespace CardHome
                 icon.raycastTarget = false;
                 icon.preserveAspect = true;
                 UIKit.Stretch(icon.rectTransform, 6);
-                var text = UIKit.Text(row, res.Summary, L.BodyFont + 2, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
+                var text = UIKit.Text(row, res.Summary, C.BodyFont + 2, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
                 text.rectTransform.anchorMin = Vector2.zero;
                 text.rectTransform.anchorMax = Vector2.one;
                 text.rectTransform.offsetMin = new Vector2(112, 4);
                 text.rectTransform.offsetMax = new Vector2(-14, -4);
                 text.resizeTextForBestFit = true;
-                text.resizeTextMinSize = Fs(L.BodyFont - 8);
-                text.resizeTextMaxSize = L.BodyFont + 2;
+                text.resizeTextMinSize = Fc(C.BodyFont - 8);
+                text.resizeTextMaxSize = C.BodyFont + 2;
                 items.Add(row);
                 top += rowH;
             }
@@ -206,11 +206,11 @@ namespace CardHome
             if (report.TreasuryGold > 0) noteLines.Add($"<color=#ffd34d>Сокровищница приносит +{report.TreasuryGold} золота</color>");
             foreach (var line in noteLines)
             {
-                var n = UIKit.Text(summaryPanel, line, L.BodyFont, TextAnchor.MiddleCenter, Cream, FontStyle.Bold);
+                var n = UIKit.Text(summaryPanel, line, C.BodyFont, TextAnchor.MiddleCenter, Cream, FontStyle.Bold);
                 UIKit.TopBand(n.rectTransform, top, noteH, 30);
                 n.resizeTextForBestFit = true;
-                n.resizeTextMinSize = Fs(L.BodyFont - 8);
-                n.resizeTextMaxSize = L.BodyFont;
+                n.resizeTextMinSize = Fc(C.BodyFont - 8);
+                n.resizeTextMaxSize = C.BodyFont;
                 items.Add(n.rectTransform);
                 top += noteH;
             }
@@ -219,12 +219,12 @@ namespace CardHome
             int repDelta = game.Reputation - report.ReputationBefore;
             string g = goldDelta >= 0 ? $"<color=#ffd34d>● +{goldDelta}</color>" : $"<color=#ff6b5e>● {goldDelta}</color>";
             string r = repDelta == 0 ? "<color=#ff6b6b>♥ без потерь</color>" : $"<color=#ff6b5e>♥ {repDelta}</color>";
-            var totals = UIKit.Outlined(UIKit.Text(summaryPanel, $"{g}        {r}", L.StatsFont + 12, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 3);
+            var totals = UIKit.Outlined(UIKit.Text(summaryPanel, $"{g}        {r}", C.StatsFont + 12, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 3);
             UIKit.TopBand(totals.rectTransform, top + 10, 110, 30);
             items.Add(totals.rectTransform);
 
             var next = UIKit.Button(summaryPanel, game.IsTutorial ? "НАЧАТЬ ИГРУ" : "ДАЛЬШЕ", RestartColor,
-                () => game?.ContinueAfterSummary(), L.ButtonFont);
+                () => game?.ContinueAfterSummary(), C.ButtonFont);
             UIKit.Place((RectTransform)next.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 36), new Vector2(520, 110));
 
             if (!animate)
@@ -297,8 +297,8 @@ namespace CardHome
         void BuildRewardOverlay()
         {
             rewardRoot = Overlay("Reward", 0.75f, out rewardContent);
-            Label(rewardContent, "НАГРАДА!", L.StatsFont + 30, Gold, 790, 100);
-            Label(rewardContent, "Выбери карту — она придёт в руку уже завтра", L.BodyFont + 2, Color.white, 715, 60, 1000, FontStyle.Normal);
+            Label(rewardContent, "НАГРАДА!", C.StatsFont + 30, Gold, 790, 100);
+            Label(rewardContent, "Выбери карту — она придёт в руку уже завтра", C.BodyFont + 2, Color.white, 715, 60, 1000, FontStyle.Normal);
 
             rewardCards = UIKit.Rect("Cards", rewardContent);
             float scale = 1.2f;
@@ -306,8 +306,8 @@ namespace CardHome
             UIKit.Place(rewardCards, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 430),
                 new Vector2(L.CardW * 3 + L.CardGap * 4, L.CardH));
 
-            rewardNext = Label(rewardContent, "", L.BodyFont, Color.white, 180, 70, 1000, FontStyle.Normal);
-            Place(UIKit.Button(rewardContent, "ПРОПУСТИТЬ", SkipColor, () => game?.PickReward(-1), Fs(L.ButtonFont - 6)), 0, 80, 360, 90);
+            rewardNext = Label(rewardContent, "", C.BodyFont, Color.white, 180, 70, 1000, FontStyle.Normal);
+            Place(UIKit.Button(rewardContent, "ПРОПУСТИТЬ", SkipColor, () => game?.PickReward(-1), Fc(C.ButtonFont - 6)), 0, 80, 360, 90);
 
             // Лавка: деревянная плашка с четырьмя покупками.
             var shop = rewardShop = UIKit.Rect("Shop", rewardContent);
@@ -315,10 +315,10 @@ namespace CardHome
             UIKit.DropShadow(shop, new Vector2(0, -14), 0.5f);
             var body = UIKit.Image("Body", shop, DarkWood, Sprites.Panel);
             UIKit.Stretch(body.rectTransform);
-            shopGold = UIKit.Outlined(UIKit.Text(shop, "", L.StatsFont, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 2.5f);
+            shopGold = UIKit.Outlined(UIKit.Text(shop, "", C.StatsFont, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 2.5f);
             UIKit.TopBand(shopGold.rectTransform, 20, 70);
 
-            int f = Fs(L.ButtonFont - 10);
+            int f = Fc(C.ButtonFont - 10);
             rerollButton = ShopButton(shop, "Reroll", () => game?.RerollReward(), f, -320, 60);
             actionButton = ShopButton(shop, "ExtraMove", () => game?.BuyExtraAction(), f, 0, 60);
             repairButton = ShopButton(shop, "Repair", () => game?.RepairAll(), f, 320, 60);
@@ -340,9 +340,9 @@ namespace CardHome
             var label = b.GetComponentInChildren<Text>();
             label.rectTransform.offsetMin = new Vector2(104, label.rectTransform.offsetMin.y);
             label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = L.MinFont;
+            label.resizeTextMinSize = C.MinFont;
             label.resizeTextMaxSize = font;
-            var tag = new PriceTag(rt, Fs(L.BodyFont - 4));
+            var tag = new PriceTag(rt, Fc(C.BodyFont - 4));
             tag.Root.anchorMin = tag.Root.anchorMax = tag.Root.pivot = new Vector2(1, 1);
             tag.Root.anchoredPosition = new Vector2(16, 22);
             shopTags[b] = tag;
@@ -401,11 +401,11 @@ namespace CardHome
         void BuildRemoveOverlay()
         {
             removeRoot = Overlay("DeckShop", 0.8f, out removeContent);
-            removeTitle = Label(removeContent, "", L.StatsFont + 10, Gold, 700, 90);
-            removeInfo = Label(removeContent, "", L.BodyFont, Color.white, 610, 90, 1000, FontStyle.Normal);
+            removeTitle = Label(removeContent, "", C.StatsFont + 10, Gold, 700, 90);
+            removeInfo = Label(removeContent, "", C.BodyFont, Color.white, 610, 90, 1000, FontStyle.Normal);
             removeGrid = UIKit.Rect("Cards", removeContent);
             UIKit.Place(removeGrid, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(1020, 1000));
-            Place(UIKit.Button(removeContent, "ГОТОВО", RestartColor, CloseRemove, Fs(L.ButtonFont - 4)), 0, -620, 380, 100);
+            Place(UIKit.Button(removeContent, "ГОТОВО", RestartColor, CloseRemove, Fc(C.ButtonFont - 4)), 0, -620, 380, 100);
         }
 
         void OpenDeckShop(bool upgrade) => OpenDeckShop(upgrade, false);
@@ -464,7 +464,7 @@ namespace CardHome
                         if (freeUpgrade) game?.RestUpgrade(c);
                         else if (upgradeMode) game?.UpgradeCard(c);
                         else game?.RemoveCard(c);
-                    }, Fs(L.BodyFont - 2));
+                    }, Fc(C.BodyFont - 2));
                 Place(b, (col - 1) * 335, 420 - row * 130, 315, 116);
                 b.interactable = can;
                 MetalEdge(b.transform, card.Level);
@@ -490,18 +490,18 @@ namespace CardHome
             trophy.preserveAspect = true;
             trophy.enabled = trophy.sprite != null;
             UIKit.Place(trophy.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 840), new Vector2(170, 170));
-            inheritTitle = Label(inheritContent, "", L.StatsFont + 30, Gold, 700, 120);
+            inheritTitle = Label(inheritContent, "", C.StatsFont + 30, Gold, 700, 120);
             inheritStars = UIKit.Rect("Stars", inheritContent);
             UIKit.Place(inheritStars, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 560), new Vector2(480, 150));
-            Label(inheritContent, "Выбери карту-наследство: она будет в колоде каждого следующего дома", L.BodyFont + 2, Color.white, 420, 90, 960, FontStyle.Normal);
+            Label(inheritContent, "Выбери карту-наследство: она будет в колоде каждого следующего дома", C.BodyFont + 2, Color.white, 420, 90, 960, FontStyle.Normal);
 
             inheritCards = UIKit.Rect("Cards", inheritContent);
             inheritCards.localScale = new Vector3(1.2f, 1.2f, 1);
             UIKit.Place(inheritCards, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 60),
                 new Vector2(L.CardW * 3 + L.CardGap * 4, L.CardH));
 
-            Place(UIKit.Button(inheritContent, "БЕЗ НАСЛЕДСТВА", SkipColor, () => game?.PickInherit(-1), Fs(L.ButtonFont - 6)), 0, -320, 440, 96);
-            inheritInfo = Label(inheritContent, "", L.BodyFont, Cream, -460, 140, 1000, FontStyle.Normal);
+            Place(UIKit.Button(inheritContent, "БЕЗ НАСЛЕДСТВА", SkipColor, () => game?.PickInherit(-1), Fc(C.ButtonFont - 6)), 0, -320, 440, 96);
+            inheritInfo = Label(inheritContent, "", C.BodyFont, Cream, -460, 140, 1000, FontStyle.Normal);
 
             // Новая рубашка за дом — справа от звёзд.
             inheritBack = UIKit.Rect("NewBack", inheritContent);
@@ -516,7 +516,7 @@ namespace CardHome
             {
                 var back = CardBacks.Create(inheritBack, game.NewBack, new Vector2(110, 154));
                 UIKit.Stretch(back);
-                var label = UIKit.Outlined(UIKit.Text(inheritBack, "Новая рубашка!", Fs(L.BodyFont - 4), TextAnchor.UpperCenter, Gold, FontStyle.Bold), 2);
+                var label = UIKit.Outlined(UIKit.Text(inheritBack, "Новая рубашка!", Fc(C.BodyFont - 4), TextAnchor.UpperCenter, Gold, FontStyle.Bold), 2);
                 UIKit.Place(label.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -4), new Vector2(220, 40));
                 inheritBack.DOKill(true);
                 inheritBack.DOScale(1, 0.5f).From(0).SetDelay(1.2f).SetEase(Ease.OutBack).SetLink(inheritBack.gameObject);
@@ -559,11 +559,11 @@ namespace CardHome
         void BuildDeckOverlay()
         {
             deckRoot = Overlay("Deck", 0.8f, out deckContent);
-            Label(deckContent, "ТВОЯ КОЛОДА", L.StatsFont + 14, Gold, 700, 100);
-            deckInfo = Label(deckContent, "", L.BodyFont + 2, Color.white, 610, 80, 1000, FontStyle.Normal);
+            Label(deckContent, "ТВОЯ КОЛОДА", C.StatsFont + 14, Gold, 700, 100);
+            deckInfo = Label(deckContent, "", C.BodyFont + 2, Color.white, 610, 80, 1000, FontStyle.Normal);
             deckGrid = UIKit.Rect("Cards", deckContent);
             UIKit.Place(deckGrid, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1020, 1000));
-            Place(UIKit.Button(deckContent, "ЗАКРЫТЬ", RestartColor, () => deckRoot.gameObject.SetActive(false), Fs(L.ButtonFont - 4)), 0, -640, 380, 100);
+            Place(UIKit.Button(deckContent, "ЗАКРЫТЬ", RestartColor, () => deckRoot.gameObject.SetActive(false), Fc(C.ButtonFont - 4)), 0, -640, 380, 100);
         }
 
         void OpenDeckView()
@@ -580,7 +580,7 @@ namespace CardHome
         {
             Clear(deckGrid);
             deckInfo.text = $"В колоде: {game.DeckCount} · в руке: {game.Hand.Count}/{GameController.MaxHand}\n" +
-                            "<size=" + (Fs(L.BodyFont - 4)) + ">Утром +2 карты, перед ночью +1. Пустая колода — усталость: −1 ♥ за каждую карту</size>";
+                            "<size=" + (Fc(C.BodyFont - 4)) + ">Утром +2 карты, перед ночью +1. Пустая колода — усталость: −1 ♥ за каждую карту</size>";
             var counts = game.DrawPileCounts();
             for (int i = 0; i < counts.Count; i++)
             {
@@ -598,18 +598,18 @@ namespace CardHome
                 icon.raycastTarget = false;
                 icon.preserveAspect = true;
                 UIKit.Place(icon.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 2), new Vector2(84, 84));
-                var t = UIKit.Outlined(UIKit.Text(chip, $"{card.Title}\n×{count}", L.BodyFont + 2, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold), 2);
+                var t = UIKit.Outlined(UIKit.Text(chip, $"{card.Title}\n×{count}", C.BodyFont + 2, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold), 2);
                 t.rectTransform.anchorMin = Vector2.zero;
                 t.rectTransform.anchorMax = Vector2.one;
                 t.rectTransform.offsetMin = new Vector2(104, 4);
                 t.rectTransform.offsetMax = new Vector2(-8, -4);
                 t.resizeTextForBestFit = true;
-                t.resizeTextMinSize = Fs(L.BodyFont - 8);
-                t.resizeTextMaxSize = L.BodyFont + 2;
+                t.resizeTextMinSize = Fc(C.BodyFont - 8);
+                t.resizeTextMaxSize = C.BodyFont + 2;
                 MetalEdge(chip, card.Level);
             }
             if (counts.Count == 0)
-                Label(deckGrid, "Колода пуста", L.StatsFont, Cream, 0, 100);
+                Label(deckGrid, "Колода пуста", C.StatsFont, Cream, 0, 100);
         }
 
         // ───────────── Карта гостя крупно ─────────────
@@ -624,10 +624,10 @@ namespace CardHome
             gameOverIcon.raycastTarget = false;
             gameOverIcon.preserveAspect = true;
             UIKit.Place(gameOverIcon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 470), new Vector2(240, 240));
-            gameOverTitle = Label(gameOverContent, "", L.StatsFont + 40, Gold, 260, 140);
-            gameOverBody = Label(gameOverContent, "", L.StatsFont, Color.white, 60, 260, 1000, FontStyle.Bold);
-            Place(UIKit.Button(gameOverContent, "ЕЩЁ РАЗ", RestartColor, () => game?.RetryLevel(), L.ButtonFont), 0, -180, 520, 120);
-            Place(UIKit.Button(gameOverContent, "В МЕНЮ", SkipColor, () => game?.ShowMenu(), Fs(L.ButtonFont - 4)), 0, -330, 420, 100);
+            gameOverTitle = Label(gameOverContent, "", C.StatsFont + 40, Gold, 260, 140);
+            gameOverBody = Label(gameOverContent, "", C.StatsFont, Color.white, 60, 260, 1000, FontStyle.Bold);
+            Place(UIKit.Button(gameOverContent, "ЕЩЁ РАЗ", RestartColor, () => game?.RetryLevel(), C.ButtonFont), 0, -180, 520, 120);
+            Place(UIKit.Button(gameOverContent, "В МЕНЮ", SkipColor, () => game?.ShowMenu(), Fc(C.ButtonFont - 4)), 0, -330, 420, 100);
         }
 
         void RefreshGameOver()
@@ -654,15 +654,15 @@ namespace CardHome
             paper.rectTransform.offsetMax = new Vector2(-26, -130);
             paper.rectTransform.offsetMin = new Vector2(26, 160);
 
-            hintTitle = UIKit.Outlined(UIKit.Text(panel, "", L.StatsFont + 10, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
+            hintTitle = UIKit.Outlined(UIKit.Text(panel, "", C.StatsFont + 10, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
             UIKit.TopBand(hintTitle.rectTransform, 24, 96);
-            hintBody = UIKit.Text(paper.transform, "", L.BodyFont + 6, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+            hintBody = UIKit.Text(paper.transform, "", C.BodyFont + 6, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
             UIKit.Stretch(hintBody.rectTransform, 26);
             hintBody.resizeTextForBestFit = true;
-            hintBody.resizeTextMinSize = Fs(L.BodyFont - 4);
-            hintBody.resizeTextMaxSize = L.BodyFont + 6;
+            hintBody.resizeTextMinSize = Fc(C.BodyFont - 4);
+            hintBody.resizeTextMaxSize = C.BodyFont + 6;
 
-            var ok = UIKit.Button(panel, "ПОНЯТНО", RestartColor, NextHint, L.ButtonFont);
+            var ok = UIKit.Button(panel, "ПОНЯТНО", RestartColor, NextHint, C.ButtonFont);
             UIKit.Place((RectTransform)ok.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(420, 110));
         }
 

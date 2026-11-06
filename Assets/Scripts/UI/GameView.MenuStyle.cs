@@ -8,6 +8,12 @@ namespace CardHome
     // ночное небо партии, деревянная доска с настоящими комнатами, кнопки как «ПОВЕРНУТЬ» и «НОЧЬ».
     public partial class GameView
     {
+        // Шрифты помощников меню. Обычно — вертикальный макет (окна на холсте 1080×1920);
+        // горизонтальное главное меню расставлено прямо по экрану и на время постройки ставит сюда L.
+        Layout menuFonts;
+        Layout M => menuFonts ?? Layout.PortraitLayout;
+        int Fm(int size) => Mathf.Max(M.MinFont, size);
+
         static readonly Color MenuWood = RoomDatabase.Hex("9a6438");
         static readonly Color Rope = RoomDatabase.Hex("3b2a1e");
 
@@ -61,12 +67,12 @@ namespace CardHome
                 nail.raycastTarget = false;
                 UIKit.Place(nail.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(x, -26), new Vector2(26, 26));
             }
-            var t = UIKit.Outlined(UIKit.Text(sign, text, size > 0 ? size : L.StatsFont + 44, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 4);
+            var t = UIKit.Outlined(UIKit.Text(sign, text, size > 0 ? size : M.StatsFont + 44, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 4);
             UIKit.Stretch(t.rectTransform, 18);
             t.rectTransform.anchoredPosition = new Vector2(0, -4);
             t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = L.StatsFont;
-            t.resizeTextMaxSize = size > 0 ? size : L.StatsFont + 44;
+            t.resizeTextMinSize = M.StatsFont;
+            t.resizeTextMaxSize = size > 0 ? size : M.StatsFont + 44;
             sign.DOLocalRotate(new Vector3(0, 0, 1f), 2.4f).From(new Vector3(0, 0, -1f)).SetLoops(-1, LoopType.Yoyo)
                 .SetEase(Ease.InOutSine).SetLink(sign.gameObject);
             return t;
@@ -78,12 +84,12 @@ namespace CardHome
             var banner = UIKit.Image("Ribbon", parent, Color.white, GuestArt.Banner);
             banner.raycastTarget = false;
             UIKit.Place(banner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, y), new Vector2(width, width * 0.19f));
-            var t = UIKit.Text(banner.transform, text, L.BodyFont + 4, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+            var t = UIKit.Text(banner.transform, text, M.BodyFont + 4, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
             UIKit.Stretch(t.rectTransform, 14);
             t.rectTransform.offsetMax = new Vector2(-width * 0.1f, -10);
             t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = Fs(L.BodyFont - 8);
-            t.resizeTextMaxSize = L.BodyFont + 4;
+            t.resizeTextMinSize = 20; // подпись на ленте — лучше мельче, но в одну строку
+            t.resizeTextMaxSize = M.BodyFont + 4;
             return t;
         }
 
@@ -97,6 +103,7 @@ namespace CardHome
             public string Title { get; init; }
             public Image Glow { get; set; }
             public Image Icon { get; set; }
+            public int HintSize { get; init; } // размер второй строки (пояснения) — из макета, где кнопку создали
         }
 
         // Значок слева в кнопке меню (Art/UI/Icons); текст сдвигается вправо. null — убрать значок.
@@ -118,8 +125,8 @@ namespace CardHome
 
         MenuBtn MakeMenuButton(RectTransform parent, Color color, string title, Vector2 pos, Vector2 size, System.Action onClick)
         {
-            var b = new MenuBtn { Title = title.ToUpper() };
-            b.Button = UIKit.Button(parent, b.Title, color, onClick, L.ButtonFont + 6);
+            var b = new MenuBtn { Title = title.ToUpper(), HintSize = Fm(M.BodyFont - 2) };
+            b.Button = UIKit.Button(parent, b.Title, color, onClick, M.ButtonFont + 6);
             var rt = (RectTransform)b.Button.transform;
             UIKit.Place(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
             b.Body = (Image)b.Button.targetGraphic;
@@ -143,7 +150,7 @@ namespace CardHome
             b.Glow.enabled = primary && enabled;
             b.Label.text = string.IsNullOrEmpty(hint)
                 ? b.Title
-                : $"{b.Title}\n<size={Fs(L.BodyFont - 2)}><color=#fff1cf>{hint}</color></size>";
+                : $"{b.Title}\n<size={b.HintSize}><color=#fff1cf>{hint}</color></size>";
         }
 
         // Квадратная кнопка-значок, как кнопка меню «≡» в партии.
@@ -151,7 +158,7 @@ namespace CardHome
         {
             var round = UiArt.RoundButton;
             bool art = round != Sprites.Circle;
-            var b = UIKit.Button(parent, "", art ? Color.white : DarkWood, onClick, L.ButtonFont);
+            var b = UIKit.Button(parent, "", art ? Color.white : DarkWood, onClick, M.ButtonFont);
             var rt = (RectTransform)b.transform;
             UIKit.Place(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(size, size));
             var body = (Image)b.targetGraphic;
@@ -181,13 +188,13 @@ namespace CardHome
                 var ribbon = UIKit.Image("Title", box, Color.white, UiArt.WindowTitle);
                 ribbon.raycastTarget = false;
                 UIKit.Place(ribbon.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, h * 0.12f), new Vector2(w, h));
-                var t = UIKit.Outlined(UIKit.Text(ribbon.transform, title, L.StatsFont + 6, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
+                var t = UIKit.Outlined(UIKit.Text(ribbon.transform, title, M.StatsFont + 6, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
                 UIKit.Stretch(t.rectTransform, 12);
                 t.rectTransform.offsetMin = new Vector2(w * 0.2f, h * 0.22f);
                 t.rectTransform.offsetMax = new Vector2(-w * 0.2f, -h * 0.12f);
                 t.resizeTextForBestFit = true;
-                t.resizeTextMinSize = Fs(L.StatsFont - 10);
-                t.resizeTextMaxSize = L.StatsFont + 6;
+                t.resizeTextMinSize = Fm(M.StatsFont - 10);
+                t.resizeTextMaxSize = M.StatsFont + 6;
             }
             else
             {
@@ -199,7 +206,7 @@ namespace CardHome
                 paper.rectTransform.anchorMax = Vector2.one;
                 paper.rectTransform.offsetMin = new Vector2(24, 24);
                 paper.rectTransform.offsetMax = new Vector2(-24, -120);
-                var t = UIKit.Outlined(UIKit.Text(box, title, L.StatsFont + 10, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
+                var t = UIKit.Outlined(UIKit.Text(box, title, M.StatsFont + 10, TextAnchor.MiddleCenter, Gold, FontStyle.Bold), 3);
                 UIKit.TopBand(t.rectTransform, 18, 96);
             }
             return box;

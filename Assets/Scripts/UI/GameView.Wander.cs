@@ -257,12 +257,12 @@ namespace CardHome
                 string label = NodeLabel(n);
                 float lw = Mathf.Clamp(label.Length * 15 + 34, 130, 300);
                 UIKit.Place(plate.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, 6), new Vector2(lw, 40));
-                var t = UIKit.Text(plate.transform, label, Fs(L.BodyFont - 6), TextAnchor.MiddleCenter,
+                var t = UIKit.Text(plate.transform, label, Fc(C.BodyFont - 6), TextAnchor.MiddleCenter,
                     boss ? RoomDatabase.Hex("6b2b8f") : n.Kind == NodeKind.Elite ? RoomDatabase.Hex("8f2b2b") : InkBrown, FontStyle.Bold);
                 UIKit.Stretch(t.rectTransform, 4);
                 t.resizeTextForBestFit = true;
                 t.resizeTextMinSize = 10;
-                t.resizeTextMaxSize = Fs(L.BodyFont - 6);
+                t.resizeTextMaxSize = Fc(C.BodyFont - 6);
             }
 
             if (visited) CheckBadge(node);
@@ -327,12 +327,12 @@ namespace CardHome
             UIKit.Stretch(icon.rectTransform, 40);
             icon.rectTransform.DOScale(1.05f, 0.5f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(icon.gameObject);
 
-            restInfo = Label(restContent, "", L.StatsFont, Color.white, 150, 90, 1000);
-            Label(restContent, "Выбери одно:", L.BodyFont + 4, Cream, 60, 60, 1000, FontStyle.Normal);
-            restHeal = Place(UIKit.Button(restContent, "ОТДОХНУТЬ\n+1 репутация", RoomDatabase.Hex("d0473c"), () => game?.RestHeal(), L.ButtonFont), -240, -120, 440, 180);
-            Place(UIKit.Button(restContent, "МАСТЕРСКАЯ\nулучшить карту даром", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true, true), Fs(L.ButtonFont - 6)),
+            restInfo = Label(restContent, "", C.StatsFont, Color.white, 150, 90, 1000);
+            Label(restContent, "Выбери одно:", C.BodyFont + 4, Cream, 60, 60, 1000, FontStyle.Normal);
+            restHeal = Place(UIKit.Button(restContent, "ОТДОХНУТЬ\n+1 репутация", RoomDatabase.Hex("d0473c"), () => game?.RestHeal(), C.ButtonFont), -240, -120, 440, 180);
+            Place(UIKit.Button(restContent, "МАСТЕРСКАЯ\nулучшить карту даром", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true, true), Fc(C.ButtonFont - 6)),
                 240, -120, 440, 180);
-            Place(UIKit.Button(restContent, "КОЛОДА", MenuButton, OpenDeckView, Fs(L.ButtonFont - 6)), 0, -320, 400, 100);
+            Place(UIKit.Button(restContent, "КОЛОДА", MenuButton, OpenDeckView, Fc(C.ButtonFont - 6)), 0, -320, 400, 100);
         }
 
         void RefreshRest()
@@ -355,11 +355,11 @@ namespace CardHome
 
             var paper = UIKit.Image("Paper", eventContent, RoomDatabase.Hex("f3d79b"), Sprites.Flat);
             UIKit.Place(paper.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 110), new Vector2(960, 260));
-            eventText = UIKit.Text(paper.transform, "", L.BodyFont + 6, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
+            eventText = UIKit.Text(paper.transform, "", C.BodyFont + 6, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
             UIKit.Stretch(eventText.rectTransform, 30);
             eventText.resizeTextForBestFit = true;
-            eventText.resizeTextMinSize = Fs(L.BodyFont - 4);
-            eventText.resizeTextMaxSize = L.BodyFont + 6;
+            eventText.resizeTextMinSize = Fc(C.BodyFont - 4);
+            eventText.resizeTextMaxSize = C.BodyFont + 6;
 
             eventChoices = UIKit.Rect("Choices", eventContent);
             UIKit.Place(eventChoices, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -330), new Vector2(960, 560));
@@ -400,14 +400,14 @@ namespace CardHome
             Clear(eventChoices);
             if (done)
             {
-                Place(UIKit.Button(eventChoices, "ДАЛЬШЕ", RestartColor, () => game?.FinishEvent(), L.ButtonFont), 0, 180, 520, 120);
+                Place(UIKit.Button(eventChoices, "ДАЛЬШЕ", RestartColor, () => game?.FinishEvent(), C.ButtonFont), 0, 180, 520, 120);
                 return;
             }
             for (int i = 0; i < ev.Choices.Length; i++)
             {
                 int index = i;
                 bool can = game.CanChoose(i);
-                var b = UIKit.Button(eventChoices, ev.Choices[i].Label, can ? MenuButton : SkipColor, () => game?.ChooseEvent(index), L.BodyFont + 4);
+                var b = UIKit.Button(eventChoices, ev.Choices[i].Label, can ? MenuButton : SkipColor, () => game?.ChooseEvent(index), C.BodyFont + 4);
                 Place(b, 0, 200 - i * 150, 900, 126);
                 b.interactable = can;
             }
@@ -415,7 +415,7 @@ namespace CardHome
 
         RectTransform Header(RectTransform content, string text)
         {
-            var t = WoodSign(content, text.ToUpper(), 840, 700, 140, L.StatsFont + 22);
+            var t = WoodSign(content, text.ToUpper(), 840, 700, 140, C.StatsFont + 22);
             return (RectTransform)t.transform.parent;
         }
 
@@ -426,19 +426,19 @@ namespace CardHome
             fairRoot = MenuScreen("Fair", out fairContent);
             Header(fairContent, "Ярмарка");
 
-            fairGold = Label(fairContent, "", L.StatsFont + 4, Gold, 740, 80);
-            Label(fairContent, "Коснись карты, чтобы купить её в колоду странствия", L.BodyFont + 2, Color.white, 660, 60, 1000, FontStyle.Normal);
+            fairGold = Label(fairContent, "", C.StatsFont + 4, Gold, 740, 80);
+            Label(fairContent, "Коснись карты, чтобы купить её в колоду странствия", C.BodyFont + 2, Color.white, 660, 60, 1000, FontStyle.Normal);
 
             fairCards = UIKit.Rect("Cards", fairContent);
             fairCards.localScale = new Vector3(1.2f, 1.2f, 1);
             UIKit.Place(fairCards, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 330),
                 new Vector2(L.CardW * 3 + L.CardGap * 4, L.CardH + 60));
 
-            fairInfo = Label(fairContent, "", L.BodyFont, Cream, -20, 70, 1000, FontStyle.Bold);
-            Place(UIKit.Button(fairContent, "УЛУЧШИТЬ КАРТУ", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true), Fs(L.ButtonFont - 6)), -240, -170, 440, 120);
-            Place(UIKit.Button(fairContent, "УБРАТЬ КАРТУ", ShopColor, () => OpenDeckShop(false), Fs(L.ButtonFont - 6)), 240, -170, 440, 120);
-            Place(UIKit.Button(fairContent, "КОЛОДА", MenuButton, OpenDeckView, Fs(L.ButtonFont - 6)), -240, -320, 440, 110);
-            Place(UIKit.Button(fairContent, "В ПУТЬ", RestartColor, () => game?.LeaveFair(), L.ButtonFont), 240, -320, 440, 110);
+            fairInfo = Label(fairContent, "", C.BodyFont, Cream, -20, 70, 1000, FontStyle.Bold);
+            Place(UIKit.Button(fairContent, "УЛУЧШИТЬ КАРТУ", RoomDatabase.Hex("d4a62c"), () => OpenDeckShop(true), Fc(C.ButtonFont - 6)), -240, -170, 440, 120);
+            Place(UIKit.Button(fairContent, "УБРАТЬ КАРТУ", ShopColor, () => OpenDeckShop(false), Fc(C.ButtonFont - 6)), 240, -170, 440, 120);
+            Place(UIKit.Button(fairContent, "КОЛОДА", MenuButton, OpenDeckView, Fc(C.ButtonFont - 6)), -240, -320, 440, 110);
+            Place(UIKit.Button(fairContent, "В ПУТЬ", RestartColor, () => game?.LeaveFair(), C.ButtonFont), 240, -320, 440, 110);
         }
 
         void RefreshFair()
@@ -457,13 +457,13 @@ namespace CardHome
                     new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, 30), new Vector2(L.CardW, L.CardH));
                 bool can = game.Gold >= price;
                 rt.GetComponent<Button>().interactable = can;
-                var tag = new PriceTag(fairCards, Fs(L.StatsFont - 8));
+                var tag = new PriceTag(fairCards, Fc(C.StatsFont - 8));
                 tag.Root.anchorMin = tag.Root.anchorMax = new Vector2(0, 0.5f);
                 tag.Root.anchoredPosition = new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, -L.CardH / 2 - 16);
                 tag.Set(price.ToString(), can);
             }
             if (offers.Count == 0)
-                Label(fairCards, "Всё раскупили!", L.StatsFont, Cream, 0, 100);
+                Label(fairCards, "Всё раскупили!", C.StatsFont, Cream, 0, 100);
         }
     }
 }
