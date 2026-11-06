@@ -230,7 +230,7 @@ namespace CardHome
             card.Root.anchoredPosition = Vector2.zero;
             card.Root.localRotation = Quaternion.identity;
             card.Root.localScale = Vector3.one * PorchScale;
-            card.MakeClickable(() => Inspect(card.Guest));
+            card.MakeClickable(() => Inspect(card.Guest, card.Root));
             porchCard = card;
         }
 

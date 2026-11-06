@@ -46,6 +46,9 @@ namespace CardHome
             Show(FaceUp);
         }
 
+        // Показать лицом или рубашкой сразу, без анимации (для оборота в крупном просмотре).
+        public void SetFace(bool up) => Show(up);
+
         void Show(bool up)
         {
             FaceUp = up;

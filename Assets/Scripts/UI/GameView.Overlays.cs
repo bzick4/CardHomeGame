@@ -125,7 +125,7 @@ namespace CardHome
             if (phase != Phase.Reward && phase != Phase.Fair && phase != Phase.Rest) CloseRemove();
             if (phase != Phase.Day && phase != Phase.Night && phase != Phase.Map && phase != Phase.Fair
                 && phase != Phase.Rest && phase != Phase.Event) deckRoot.gameObject.SetActive(false);
-            if (phase != Phase.Night) inspectRoot.gameObject.SetActive(false);
+            CloseInspectOnPhase(phase);
             if (phase == Phase.LevelDone) AnimateStars();
 
             bool summary = phase == Phase.Summary;
@@ -613,30 +613,6 @@ namespace CardHome
         }
 
         // ───────────── Карта гостя крупно ─────────────
-
-        void BuildInspectOverlay()
-        {
-            inspectRoot = Overlay("Inspect", 0.7f, out inspectContent);
-            // Касание в любом месте закрывает.
-            var close = inspectRoot.gameObject.AddComponent<Button>();
-            close.transition = Selectable.Transition.None;
-            close.targetGraphic = inspectRoot.GetComponentInChildren<Image>();
-            close.onClick.AddListener(() => inspectRoot.gameObject.SetActive(false));
-        }
-
-        void Inspect(GuestDef g)
-        {
-            Clear(inspectContent);
-            var card = GuestCard.Create(inspectContent, g, true, game.OpponentBack);
-            card.Root.localScale = Vector3.one * 2.2f;
-            card.Root.anchoredPosition = new Vector2(0, 80);
-            Label(inspectContent, "Коснись, чтобы закрыть", L.BodyFont, Cream, -560, 60, 1000, FontStyle.Normal);
-            inspectRoot.gameObject.SetActive(true);
-            inspectRoot.SetAsLastSibling();
-            if (tutorial != null) tutorial.BringToFront();
-            Pop(inspectContent);
-            Sfx.Card();
-        }
 
         // ───────────── Конец игры ─────────────
 

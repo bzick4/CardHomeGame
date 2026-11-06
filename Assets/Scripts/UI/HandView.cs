@@ -38,6 +38,8 @@ namespace CardHome
         readonly List<HandCard> cards = new List<HandCard>();
 
         public event Action<int> CardTapped;
+        // Долгое нажатие без движения — посмотреть карту крупно.
+        public event Action<int> CardHeld;
 
         // Откуда вылетают новые карты (обычно — из колоды справа). null — снизу экрана.
         public Func<Vector2?> DealOrigin { get; internal set; }
@@ -109,6 +111,7 @@ namespace CardHome
         }
 
         internal void Tap(int index) => CardTapped?.Invoke(index);
+        internal void Hold(int index) => CardHeld?.Invoke(index);
 
         // ───── Просмотр руки пальцем ─────
         // Ведёшь пальцем вдоль руки — карты волной поднимаются за ним; отпустил — выбрана карта под пальцем;
@@ -318,6 +321,11 @@ namespace CardHome
 
         HandView owner;
         float lift;
+        // Долгое нажатие: таймер DOTween; движение пальца, отпускание или перетаскивание его отменяют.
+        const float HoldTime = 0.35f, HoldSlop = 12f;
+        Tween holdTimer;
+        Vector2 holdStart;
+        bool held;
         bool hover, pressed, selected, dragging, browsing, interactable = true;
         Vector2 grabOffset;
         Sequence tween;
@@ -421,6 +429,7 @@ namespace CardHome
 
         public void OnPointerExit(PointerEventData e)
         {
+            if ((e.position - holdStart).sqrMagnitude > HoldSlop * HoldSlop) holdTimer?.Kill();
             if (!hover && !pressed) return;
             hover = false;
             pressed = false;
@@ -430,6 +439,16 @@ namespace CardHome
 
         public void OnPointerDown(PointerEventData e)
         {
+            held = false;
+            holdStart = e.position;
+            holdTimer?.Kill();
+            holdTimer = DOVirtual.DelayedCall(HoldTime, () =>
+            {
+                held = true;
+                pressed = hover = false;
+                ApplyPose(0.15f);
+                owner.Hold(Index);
+            }).SetLink(gameObject);
             if (!interactable) return;
             pressed = true;
             owner.SortSiblings();
@@ -438,6 +457,7 @@ namespace CardHome
 
         public void OnPointerUp(PointerEventData e)
         {
+            holdTimer?.Kill();
             if (!pressed) return;
             pressed = false;
             ApplyPose(0.2f);
@@ -445,6 +465,11 @@ namespace CardHome
 
         public void OnPointerClick(PointerEventData e)
         {
+            if (held)
+            {
+                held = false; // это было долгое нажатие — карту уже открыли крупно
+                return;
+            }
             if (interactable && !e.dragging) owner.Tap(Index);
         }
 
@@ -453,6 +478,12 @@ namespace CardHome
         // Куда повёл палец: вверх — берём карту на поле, вбок — просматриваем руку волной.
         public void OnBeginDrag(PointerEventData e)
         {
+            holdTimer?.Kill();
+            if (held)
+            {
+                e.pointerDrag = null; // карта уже открыта крупно — не тащим
+                return;
+            }
             var move = e.position - e.pressPosition;
             if (Mathf.Abs(move.x) > Mathf.Abs(move.y) || move.y < 0 || !interactable)
             {

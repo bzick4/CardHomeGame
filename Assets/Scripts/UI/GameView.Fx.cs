@@ -1,5 +1,6 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CardHome
 {
@@ -9,11 +10,11 @@ namespace CardHome
     {
         static Sprite FxArt(string name) => ArtStore.Get("Fx/" + name, null);
 
-        // Вспышка в точке parent: появляется с подскоком, поднимается на rise·size и тает.
-        void Burst(RectTransform parent, string name, Vector2 pos, float size, float rise = 0.35f, float life = 0.9f)
+        // Вспышка в точке parent: появляется с подскоком, поднимается на rise·size и тает. Возвращает картинку (или null).
+        Image Burst(RectTransform parent, string name, Vector2 pos, float size, float rise = 0.35f, float life = 0.9f)
         {
             var sprite = FxArt(name);
-            if (sprite == null || parent == null) return;
+            if (sprite == null || parent == null) return null;
             var img = UIKit.Image("Fx" + name, parent, Color.white, sprite);
             img.raycastTarget = false;
             img.preserveAspect = true;
@@ -28,6 +29,7 @@ namespace CardHome
                 .Insert(life * 0.55f, img.DOFade(0, life * 0.45f))
                 .SetLink(img.gameObject)
                 .OnComplete(() => Destroy(img.gameObject));
+            return img;
         }
 
         // Вспышка над гостем на доске.

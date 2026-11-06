@@ -339,6 +339,12 @@ namespace CardHome
             handView = new HandView(handRoot, L.CardW, L.CardH, handRoot.sizeDelta.x,
                 (card, doors) => BuildCardVisual(handRoot, card.Def, doors, card.Level, compact: true));
             handView.CardTapped += i => game?.SelectCard(i);
+            handView.CardHeld += i =>
+            {
+                if (game == null || i < 0 || i >= game.Hand.Count) return;
+                var c = game.Hand[i];
+                InspectRoom(c.Def, c.Level, i == game.Selected ? game.SelectedDoors : c.Def.Doors, handView.CardRect(i));
+            };
             handView.DragBegan = OnCardDragBegan;
             handView.Dragging = OnCardDragging;
             handView.Dropped = OnCardDropped;
@@ -799,8 +805,12 @@ namespace CardHome
             var parts = BuildCardVisual(parent, def, def.Doors, level);
             var btn = parts.Root.gameObject.AddComponent<Button>();
             btn.targetGraphic = parts.Frame;
+            // Тап — выбор, долгое нажатие — крупный просмотр (тогда выбора нет).
+            var hold = parts.Root.gameObject.AddComponent<LongPress>();
+            hold.OnHold = () => InspectRoom(def, level, def.Doors, parts.Root);
             btn.onClick.AddListener(() =>
             {
+                if (hold.Consume()) return;
                 Sfx.Click();
                 onClick();
             });

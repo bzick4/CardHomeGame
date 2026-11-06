@@ -236,4 +236,35 @@ namespace CardHome
             img.pixelsPerUnitMultiplier = Mathf.Max(1, Height / h);
         }
     }
+
+    // Долгое нажатие на элемент (~0.35 с без движения). После него обычный клик того же касания
+    // надо пропустить — для этого Consume(): вернёт true один раз.
+    public class LongPress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler, IBeginDragHandler
+    {
+        public Action OnHold { get; set; }
+        Tween timer;
+        bool fired;
+
+        public bool Consume()
+        {
+            bool f = fired;
+            fired = false;
+            return f;
+        }
+
+        public void OnPointerDown(PointerEventData e)
+        {
+            fired = false;
+            timer?.Kill();
+            timer = DOVirtual.DelayedCall(0.35f, () =>
+            {
+                fired = true;
+                OnHold?.Invoke();
+            }).SetLink(gameObject);
+        }
+
+        public void OnPointerUp(PointerEventData e) => timer?.Kill();
+        public void OnPointerExit(PointerEventData e) => timer?.Kill();
+        public void OnBeginDrag(PointerEventData e) => timer?.Kill();
+    }
 }
