@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace CardHome
@@ -6,12 +7,40 @@ namespace CardHome
     // Текст игры. Шрифт Noto Sans не содержит значков вроде ● ♥ ★ ✓ ▶, а в WebGL подставить их неоткуда —
     // вместо них были бы пустые квадраты. Поэтому любой текст при записи проходит через Glyphs.Clean.
     // Там, где важна картинка (золото, сердца, отметки), интерфейс ставит иконки Art/UI/Icons отдельно.
+    // Ещё одна защита: при автоподборе размера (best fit) Unity не рисует строку вовсе, если даже минимальный
+    // размер не влезает по высоте рамки. Поэтому минимум подрезается под высоту рамки — при смене размера (событие).
     public class SafeText : Text
     {
         public override string text
         {
             get => base.text;
-            set => base.text = Glyphs.Clean(value);
+            set
+            {
+                base.text = Glyphs.Clean(value);
+                FitMinToHeight();
+            }
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            FitMinToHeight();
+        }
+
+        protected override void OnRectTransformDimensionsChange()
+        {
+            base.OnRectTransformDimensionsChange();
+            FitMinToHeight();
+        }
+
+        // Только снижает минимум, если строка такого размера не влезает по высоте (одна строка ≈ 1.2 размера).
+        void FitMinToHeight()
+        {
+            if (!resizeTextForBestFit) return;
+            float h = rectTransform.rect.height;
+            if (h <= 1) return;
+            int fits = Mathf.Max(6, Mathf.FloorToInt(h / 1.2f));
+            if (resizeTextMinSize > fits) resizeTextMinSize = fits;
         }
     }
 

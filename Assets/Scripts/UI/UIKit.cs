@@ -61,8 +61,9 @@ namespace CardHome
             t.supportRichText = true;
             t.raycastTarget = false;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            // Не влез по высоте — пусть чуть выйдет за рамку, а не исчезнет целиком (Unity не рисует строку, которая не помещается).
-            t.verticalOverflow = VerticalWrapMode.Overflow;
+            // Truncate обязателен: только так работает автоподбор размера (best fit).
+            // Чтобы строка не исчезала в тесной рамке, SafeText сам снижает минимальный размер под её высоту.
+            t.verticalOverflow = VerticalWrapMode.Truncate;
             return t;
         }
 

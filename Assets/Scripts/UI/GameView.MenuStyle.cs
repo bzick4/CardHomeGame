@@ -85,10 +85,14 @@ namespace CardHome
             banner.raycastTarget = false;
             UIKit.Place(banner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, y), new Vector2(width, width * 0.19f));
             var t = UIKit.Text(banner.transform, text, M.BodyFont + 4, TextAnchor.MiddleCenter, InkBrown, FontStyle.Bold);
-            UIKit.Stretch(t.rectTransform, 14);
-            t.rectTransform.offsetMax = new Vector2(-width * 0.1f, -10);
+            // Рамка текста высотой в одну строку: автоподбор ужимает шрифт по ширине, а не переносит на вторую строку.
+            float h = width * 0.19f;
+            t.rectTransform.anchorMin = Vector2.zero;
+            t.rectTransform.anchorMax = Vector2.one;
+            t.rectTransform.offsetMin = new Vector2(14, h * 0.28f);
+            t.rectTransform.offsetMax = new Vector2(-width * 0.1f, -h * 0.22f);
             t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = 20; // подпись на ленте — лучше мельче, но в одну строку
+            t.resizeTextMinSize = 18;
             t.resizeTextMaxSize = M.BodyFont + 4;
             return t;
         }
