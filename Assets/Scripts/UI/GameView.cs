@@ -353,12 +353,14 @@ namespace CardHome
             handRoot.sizeDelta = new Vector2(L.Portrait ? 820 : 900, L.CardH + 30);
             handView = new HandView(handRoot, L.CardW, L.CardH, handRoot.sizeDelta.x,
                 (card, doors) => BuildCardVisual(handRoot, card.Def, doors, card.Level, compact: true));
-            // Тап — выбрать карту (повторный — повернуть). Когда ходить нельзя (ночь, ходы кончились), тап открывает
-            // крупный просмотр, как у гостей. Ещё просмотр — значок «i» на выбранной карте и долгое нажатие.
+            // Днём тап — выбрать карту (повторный — повернуть). Ночью рука для просмотра: тап открывает карту крупно,
+            // как у гостей, тап по уже выбранной — поворот, ответить гостю — перетащить карту на поле.
+            // Когда ходов нет — тап тоже открывает просмотр. Ещё просмотр — значок «i» и долгое нажатие.
             handView.CardTapped += i =>
             {
                 if (game == null) return;
-                if (game.CanAct) game.SelectCard(i);
+                bool day = game.State == Phase.Day;
+                if (game.CanAct && (day || i == game.Selected)) game.SelectCard(i);
                 else InspectHandCard(i);
             };
             handView.CardHeld += InspectHandCard;

@@ -61,7 +61,8 @@ namespace CardHome
             t.supportRichText = true;
             t.raycastTarget = false;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Truncate;
+            // Не влез по высоте — пусть чуть выйдет за рамку, а не исчезнет целиком (Unity не рисует строку, которая не помещается).
+            t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
         }
 

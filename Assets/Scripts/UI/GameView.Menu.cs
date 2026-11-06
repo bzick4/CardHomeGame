@@ -403,11 +403,11 @@ namespace CardHome
 
             var plaque = UIKit.Image("Plaque", node, DarkWood, Sprites.Panel);
             plaque.raycastTarget = false;
-            UIKit.Place(plaque.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -60), new Vector2(200, 42));
+            UIKit.Place(plaque.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -58), new Vector2(250, 56));
             var name = UIKit.Outlined(UIKit.Text(plaque.transform, $"{level.Index + 1} · {level.Title}", Fs(L.BodyFont - 2), TextAnchor.MiddleCenter, Cream, FontStyle.Bold), 2);
             UIKit.Stretch(name.rectTransform, 6);
             name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = Fs(L.BodyFont - 10);
+            name.resizeTextMinSize = 22; // длинные названия («Постоялый двор») ужимаются, чтобы влезть в табличку
             name.resizeTextMaxSize = Fs(L.BodyFont - 2);
 
             if (stars > 0)
@@ -454,9 +454,12 @@ namespace CardHome
                 // Здесь есть начатый день — его можно продолжить.
                 var pill = UIKit.Image("Saved", node, RoomDatabase.Hex("2fb5c4"), Sprites.Panel);
                 pill.raycastTarget = false;
-                UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -112), new Vector2(230, 44));
-                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"Продолжить: день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
+                UIKit.Place(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, -118), new Vector2(250, 50));
+                var t = UIKit.Outlined(UIKit.Text(pill.transform, $"Продолжить · день {SaveSystem.LoadRun()?.Night}", Fs(L.BodyFont - 4), TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 2);
                 UIKit.Stretch(t.rectTransform, 4);
+                t.resizeTextForBestFit = true;
+                t.resizeTextMinSize = 20;
+                t.resizeTextMaxSize = Fs(L.BodyFont - 4);
             }
 
             var hit = node.gameObject.AddComponent<Image>();
