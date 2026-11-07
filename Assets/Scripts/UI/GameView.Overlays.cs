@@ -465,13 +465,32 @@ namespace CardHome
                     () =>
                     {
                         if (freeUpgrade) game?.RestUpgrade(c);
-                        else if (upgradeMode) game?.UpgradeCard(c);
+                        else if (upgradeMode)
+                        {
+                            justUpgraded = (c.Type, c.Level + 1);
+                            game?.UpgradeCard(c);
+                            justUpgraded = null;
+                        }
                         else game?.RemoveCard(c);
                     }, Fc(C.BodyFont - 2));
                 Place(b, (col - 1) * 335, 420 - row * 130, 315, 116);
                 b.interactable = can;
                 MetalEdge(b.transform, card.Level);
+                if (upgradeMode && justUpgraded == (card.Type, card.Level)) CelebrateUpgrade(b);
             }
+        }
+
+        // Только что улучшенная карта в списке лавки: вспышка белым, подскок и искры.
+        (RoomType, int)? justUpgraded;
+
+        void CelebrateUpgrade(Button b)
+        {
+            var rt = (RectTransform)b.transform;
+            var body = b.targetGraphic;
+            if (body != null) Juice.Flash(body, Color.white, 0.35f);
+            Juice.Punch(rt, 0.16f, 0.3f);
+            var parent = (RectTransform)rt.parent;
+            Burst(parent, "Sparkles", rt.anchoredPosition, rt.rect.width * 0.9f, 0.2f, 1f);
         }
 
         // Тонкая металлическая окантовка у улучшенной карты в списках.

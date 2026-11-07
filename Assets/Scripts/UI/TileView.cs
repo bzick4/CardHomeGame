@@ -269,10 +269,19 @@ namespace CardHome
         }
 
         // Короткая вспышка, когда комнату ломают.
+        // Нельзя поставить сюда: клетка вспыхивает красным.
+        public void FlashBad() => Juice.Flash(HasRoom ? body : slot, new Color(1f, 0.25f, 0.2f, 1f), 0.3f);
+
         public void PlayBreak()
         {
-            Root.DOKill(true);
-            Root.DOShakeAnchorPos(0.4f, 14, 30).SetLink(Root.gameObject);
+            Juice.Shake(Root, 16, 0.45f, 30);
+
+            // Комната на миг темнеет — удар.
+            var c = shade.color;
+            shade.DOKill(true);
+            DOTween.Sequence().SetLink(shade.gameObject)
+                .Append(shade.DOFade(Mathf.Max(c.a, 0.55f), 0.08f))
+                .Append(shade.DOFade(c.a, 0.5f).SetEase(Ease.InQuad));
 
             // Комната частично «прогорает» золотым краем (UI_Dissolve) — и проступает пролом.
             var burn = UiShaders.NewDissolve();
@@ -293,8 +302,8 @@ namespace CardHome
             }
 
             crack.enabled = true;
-            crack.transform.DOKill();
-            crack.transform.DOScale(1, 0.25f).From(1.6f).SetDelay(burn != null ? 0.2f : 0).SetEase(Ease.OutBack).SetLink(crack.gameObject);
+            crack.transform.localScale = Vector3.zero;
+            DOVirtual.DelayedCall(burn != null ? 0.3f : 0.05f, () => Juice.PopIn(crack.rectTransform, 0.3f)).SetLink(crack.gameObject);
         }
 
         void SetGlow(Glow mode)

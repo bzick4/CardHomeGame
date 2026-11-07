@@ -37,6 +37,9 @@ namespace CardHome
         public static RectTransform ScreenRoot { get; set; }
 
         static float K => Reduced ? Tuning.ReducedFactor : 1f;
+
+        // Сила эффекта с учётом «Меньше эффектов» — для твинов, собранных на месте.
+        public static float Strength(float v) => v * K;
         static string Id(string effect, UnityEngine.Object target) => effect + target.GetInstanceID();
 
         static void KillSame(string id) => DOTween.Kill(id, true);

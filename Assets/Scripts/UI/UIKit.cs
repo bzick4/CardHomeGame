@@ -191,22 +191,27 @@ namespace CardHome
     }
 
     // Кнопка чуть сжимается под пальцем и пружинит обратно.
+    // Отклик кнопки: нажал — проседает (0.94 за 0.06 с), отпустил — возвращается с подскоком.
+    // Исходный масштаб запоминается при создании, чтобы «дыхание» кнопки (Juice.Pulse) не сбивало его.
     public class PressScale : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
-        public float Pressed { get; set; } = 0.92f;
+        public float Pressed { get; set; } = 0.94f;
         Selectable selectable;
-        Vector3 baseScale;
+        Vector3 baseScale = Vector3.one;
         bool down;
 
-        void Awake() => selectable = GetComponent<Selectable>();
+        void Awake()
+        {
+            selectable = GetComponent<Selectable>();
+            baseScale = transform.localScale;
+        }
 
         public void OnPointerDown(PointerEventData e)
         {
             if (selectable != null && !selectable.interactable) return;
-            if (!down) baseScale = transform.localScale;
             down = true;
-            transform.DOKill();
-            transform.DOScale(baseScale * Pressed, 0.08f).SetEase(Ease.OutQuad).SetLink(gameObject);
+            transform.DOKill(true);
+            transform.DOScale(baseScale * Pressed, 0.06f).SetEase(Ease.OutQuad).SetLink(gameObject);
         }
 
         public void OnPointerUp(PointerEventData e) => Release();
@@ -217,7 +222,10 @@ namespace CardHome
             if (!down) return;
             down = false;
             transform.DOKill();
-            transform.DOScale(baseScale, 0.25f).SetEase(Ease.OutBack).SetLink(gameObject);
+            DOTween.Sequence().SetTarget(transform).SetLink(gameObject)
+                .Append(transform.DOScale(baseScale, 0.07f).SetEase(Ease.OutQuad))
+                .Append(transform.DOPunchScale(baseScale * Juice.Strength(0.08f), 0.22f, 6, 0.6f))
+                .OnKill(() => { if (this != null && !down) transform.localScale = baseScale; });
         }
     }
 

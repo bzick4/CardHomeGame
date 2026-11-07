@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
 using UnityEngine;
@@ -754,6 +755,8 @@ namespace CardHome
             bool letIn = state == Phase.Night;
             SetButton(nightButton, letIn ? "ВПУСТИТЬ" : "НОЧЬ", letIn ? LetInColor : NightColor);
             menuButton.gameObject.SetActive(state == Phase.Day && !game.IsTutorial);
+            UpdateNightPulse();
+            AnimateRotation();
 
             RefreshOpponent();
             RefreshRoutes();
@@ -1055,9 +1058,11 @@ namespace CardHome
             if (!CanPlayAt(cell.Value))
             {
                 // Нельзя: короткая «тряска» клетки и подсказка в журнале.
-                var rt = tiles[cell.Value.x, cell.Value.y].Root;
-                rt.DOKill(true);
-                rt.DOShakeAnchorPos(0.25f, 10, 25).SetLink(rt.gameObject);
+                var tile = tiles[cell.Value.x, cell.Value.y];
+                Juice.Shake(tile.Root, 10, 0.25f, 25);
+                tile.FlashBad();
+                Burst(gridRoot, "TileBad", CellPos(cell.Value), L.Cell * 1.3f, 0, 0.55f);
+                handView.Reject(index);
                 game.AddLog("<color=#ffb070>Сюда нельзя: двери должны совпасть с дверью соседа. Поверни карту (тап по ней).</color>");
                 return false;
             }
@@ -1075,13 +1080,79 @@ namespace CardHome
             rt.SetAsLastSibling();
             routeLayer.SetAsLastSibling();
             guestToken.SetAsLastSibling();
-            rt.DOKill();
-            rt.localScale = Vector3.one * 1.45f;
-            rt.DOScale(1, 0.4f).SetEase(Ease.OutBack, 3f).SetLink(rt.gameObject);
+            rt.DOKill(true);
+            // Падает на клетку и сплющивается от удара.
+            rt.localScale = Vector3.one * 1.3f;
+            DOTween.Sequence().SetLink(rt.gameObject)
+                .Append(rt.DOScale(1, 0.13f).SetEase(Ease.InQuad))
+                .AppendCallback(() => Juice.Squash(rt, 0.16f, 0.35f));
             Sfx.Plop();
+            Burst(gridRoot, "TileOk", CellPos(p), L.Cell * 1.3f, 0, 0.55f);
             // Улучшенная комната — с искрами.
             var room = game.Grid.Get(p);
             if (room != null && room.Level > 1) Burst(gridRoot, "Sparkles", CellPos(p), L.Cell * 1.2f, 0.25f, 1.1f);
+            PunchConnected(p);
+        }
+
+        // Соседи, соединённые дверями, вздрагивают по цепочке — видно, что двери сошлись.
+        void PunchConnected(Vector2Int from)
+        {
+            var seen = new HashSet<Vector2Int> { from };
+            var frontier = new List<Vector2Int> { from };
+            for (int step = 1; step <= 8 && frontier.Count > 0; step++)
+            {
+                var next = new List<Vector2Int>();
+                foreach (var q in frontier)
+                foreach (var n in game.Grid.Connected(q))
+                    if (seen.Add(n)) next.Add(n);
+                foreach (var n in next)
+                {
+                    var nrt = tiles[n.x, n.y].Root;
+                    DOVirtual.DelayedCall(0.13f + step * 0.04f, () => Juice.Punch(nrt, 0.07f, 0.22f)).SetLink(nrt.gameObject);
+                }
+                frontier = next;
+            }
+        }
+
+        // Поворот: схема дверей (или перенесённая комната) докручивается с пружинкой.
+        int rotSelected = -1;
+        Vector2Int? rotMoving;
+        Doors rotDoors;
+
+        void AnimateRotation()
+        {
+            int sel = game.Selected;
+            var moving = game.MovingFrom;
+            var doors = game.SelectedDoors;
+            bool same = sel == rotSelected && moving == rotMoving;
+            bool turned = same && doors != rotDoors && (sel >= 0 || moving.HasValue);
+            rotSelected = sel;
+            rotMoving = moving;
+            rotDoors = doors;
+            if (!turned) return;
+
+            RectTransform target = null;
+            if (moving.HasValue) target = tiles[moving.Value.x, moving.Value.y].Root;
+            else
+            {
+                var parts = handView.PartsAt(sel);
+                target = parts?.Scheme?.Root ?? parts?.Tile?.Root;
+            }
+            if (target == null) return;
+            target.DOKill(true);
+            target.localEulerAngles = new Vector3(0, 0, 90); // двери уже на новом месте: доворачиваем по часовой
+            DOTween.Sequence().SetLink(target.gameObject)
+                .Append(target.DOLocalRotate(Vector3.zero, 0.3f).SetEase(Ease.OutBack))
+                .AppendCallback(() => Juice.Punch(target, 0.05f, 0.18f));
+        }
+
+        // Ходы кончились — кнопка «НОЧЬ» «дышит», пока её не нажмут.
+        void UpdateNightPulse()
+        {
+            var rt = (RectTransform)nightButton.transform;
+            bool pulse = game.State == Phase.Day && game.ActionsLeft <= 0 && !game.IsTutorial;
+            if (pulse) Juice.Pulse(rt, 1.07f, 0.9f);
+            else Juice.StopPulse(rt);
         }
 
         void AnimateBroken(Vector2Int p)

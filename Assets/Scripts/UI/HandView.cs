@@ -111,6 +111,12 @@ namespace CardHome
         }
 
         internal void Tap(int index) => CardTapped?.Invoke(index);
+        public CardParts PartsAt(int index) => index >= 0 && index < cards.Count ? cards[index].Parts : null;
+        // Карту бросили туда, где её не поставить: вернувшись в руку, она «отряхнётся».
+        public void Reject(int index)
+        {
+            if (index >= 0 && index < cards.Count) cards[index].Rejected = true;
+        }
         internal void Hold(int index) => CardHeld?.Invoke(index);
 
         // ───── Просмотр руки пальцем ─────
@@ -318,6 +324,8 @@ namespace CardHome
         public float BaseRot { get; private set; }
         public bool IsUp => hover || pressed || selected;
         public bool Interactable => interactable;
+        internal bool Rejected { get; set; }
+        Image liftShadow; // тень под взятой картой: карта «приподнялась»
 
         HandView owner;
         float lift;
@@ -538,7 +546,9 @@ namespace CardHome
             grabOffset = Rt.anchoredPosition - local;
             tween = DOTween.Sequence().SetLink(gameObject)
                 .Append(Rt.DOLocalRotate(Vector3.zero, 0.12f))
-                .Join(Rt.DOScale(0.85f, 0.15f).SetEase(Ease.OutBack));
+                .Join(Rt.DOScale(0.85f, 0.15f).SetEase(Ease.OutBack))
+                .Append(Rt.DOPunchScale(Vector3.one * Juice.Strength(0.06f), 0.18f, 6, 0.6f));
+            ShowLiftShadow(true);
             Sfx.Card();
             owner.DragBegan?.Invoke(Index);
         }
@@ -574,12 +584,47 @@ namespace CardHome
             if (!dragging) return;
             dragging = false;
             owner.IsDragging = false;
+            ShowLiftShadow(false);
+            Rejected = false;
             bool played = owner.Dropped != null && owner.Dropped(Index, e.position);
             if (played) return; // карта ушла на поле, рука сама перестроится
             Group.DOKill();
             Group.alpha = 1;
             ApplyPose(0.25f, force: true);
+            if (Rejected)
+            {
+                // Пружинит обратно и «отряхивается»; следующая смена позы гасит тряску вместе с твином.
+                Rejected = false;
+                tween?.Append(Rt.DOShakeAnchorPos(0.25f, Juice.Strength(10), 24, 90, false, true));
+            }
             owner.SortSiblings();
+        }
+
+        // Большая мягкая тень, пока карту несут; гаснет, когда её отпустили.
+        void ShowLiftShadow(bool on)
+        {
+            if (liftShadow == null)
+            {
+                if (!on) return;
+                liftShadow = UIKit.DropShadow(Rt, Vector2.zero, 0);
+                liftShadow.rectTransform.SetSiblingIndex(1); // над зоной касания, под картинкой
+            }
+            var srt = liftShadow.rectTransform;
+            liftShadow.DOKill();
+            srt.DOKill();
+            float pad = Rt.rect.width * 0.08f;
+            if (on)
+            {
+                liftShadow.DOFade(0.45f, 0.15f).SetLink(liftShadow.gameObject);
+                srt.DOAnchorPos(new Vector2(pad * 0.6f, -pad * 1.6f), 0.15f).SetLink(liftShadow.gameObject);
+                srt.DOScale(1.12f, 0.15f).SetLink(liftShadow.gameObject);
+            }
+            else
+            {
+                liftShadow.DOFade(0, 0.15f).SetLink(liftShadow.gameObject);
+                srt.DOAnchorPos(Vector2.zero, 0.15f).SetLink(liftShadow.gameObject);
+                srt.DOScale(1f, 0.15f).SetLink(liftShadow.gameObject);
+            }
         }
     }
 }
