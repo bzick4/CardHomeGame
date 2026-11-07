@@ -89,8 +89,8 @@ namespace CardHome
             float h = width * 0.19f;
             t.rectTransform.anchorMin = Vector2.zero;
             t.rectTransform.anchorMax = Vector2.one;
-            t.rectTransform.offsetMin = new Vector2(14, h * 0.28f);
-            t.rectTransform.offsetMax = new Vector2(-width * 0.1f, -h * 0.22f);
+            t.rectTransform.offsetMin = new Vector2(width * 0.13f, h * 0.28f); // слева — сложенный хвост ленты
+            t.rectTransform.offsetMax = new Vector2(-width * 0.16f, -h * 0.22f); // справа — острый конец
             t.resizeTextForBestFit = true;
             t.resizeTextMinSize = 18;
             t.resizeTextMaxSize = M.BodyFont + 4;
@@ -103,14 +103,14 @@ namespace CardHome
         {
             public Button Button { get; set; }
             public Image Body { get; set; }
-            public Text Label { get; set; }
+            public Text Label { get; set; } // название (крупно)
+            public Text Hint { get; set; }  // пояснение (второй строкой, мельче)
             public string Title { get; init; }
             public Image Glow { get; set; }
             public Image Icon { get; set; }
-            public int HintSize { get; init; } // размер второй строки (пояснения) — из макета, где кнопку создали
         }
 
-        // Значок слева в кнопке меню (Art/UI/Icons); текст сдвигается вправо. null — убрать значок.
+        // Значок слева в кнопке меню (Art/UI/Icons); тексты сдвигаются вправо. null — убрать значок.
         void SetMenuIcon(MenuBtn b, Sprite icon)
         {
             var rt = (RectTransform)b.Button.transform;
@@ -120,22 +120,54 @@ namespace CardHome
                 b.Icon = UIKit.Image("Icon", b.Body.transform, Color.white);
                 b.Icon.raycastTarget = false;
                 b.Icon.preserveAspect = true;
-                UIKit.Place(b.Icon.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(h * 0.28f, 4), Vector2.one * h * 0.68f);
+                UIKit.Place(b.Icon.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(h * 0.28f, 4), Vector2.one * h * 0.62f);
             }
             b.Icon.sprite = icon;
             b.Icon.enabled = icon != null;
-            b.Label.rectTransform.offsetMin = new Vector2(icon != null ? h * 0.95f : 6, b.Label.rectTransform.offsetMin.y);
+            LayoutMenuLabels(b);
+        }
+
+        // Название и пояснение — два отдельных текста, каждый сам ужимается под свою полосу кнопки
+        // (одна строка со вложенным <size> не ужималась и вылезала за кнопку).
+        void LayoutMenuLabels(MenuBtn b)
+        {
+            var rt = (RectTransform)b.Button.transform;
+            float h = rt.rect.height > 1 ? rt.rect.height : rt.sizeDelta.y;
+            float left = b.Icon != null && b.Icon.enabled ? h * 0.95f : h * 0.3f;
+            float right = h * 0.3f; // не заезжать на металлические уголки кнопки
+            bool hasHint = !string.IsNullOrEmpty(b.Hint.text);
+            Band(b.Label.rectTransform, hasHint ? 0.4f : 0.1f, 0.92f, left, right);
+            b.Hint.gameObject.SetActive(hasHint);
+            if (hasHint) Band(b.Hint.rectTransform, 0.1f, 0.44f, left, right);
+
+            static void Band(RectTransform t, float y0, float y1, float l, float r)
+            {
+                t.anchorMin = new Vector2(0, y0);
+                t.anchorMax = new Vector2(1, y1);
+                t.offsetMin = new Vector2(l, 0);
+                t.offsetMax = new Vector2(-r, 0);
+            }
         }
 
         MenuBtn MakeMenuButton(RectTransform parent, Color color, string title, Vector2 pos, Vector2 size, System.Action onClick)
         {
-            var b = new MenuBtn { Title = title.ToUpper(), HintSize = Fm(M.BodyFont - 2) };
-            b.Button = UIKit.Button(parent, b.Title, color, onClick, M.ButtonFont + 6);
+            var b = new MenuBtn { Title = title.ToUpper() };
+            int titleSize = M.ButtonFont + 6;
+            b.Button = UIKit.Button(parent, b.Title, color, onClick, titleSize);
             var rt = (RectTransform)b.Button.transform;
             UIKit.Place(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
             b.Body = (Image)b.Button.targetGraphic;
             b.Label = b.Button.GetComponentInChildren<Text>();
-            b.Label.lineSpacing = 0.9f;
+            b.Label.resizeTextForBestFit = true;
+            b.Label.resizeTextMinSize = Mathf.Max(12, titleSize / 2);
+            b.Label.resizeTextMaxSize = titleSize;
+
+            int hintSize = Fm(M.BodyFont - 2);
+            b.Hint = UIKit.Outlined(UIKit.Text(b.Body.transform, "", hintSize, TextAnchor.MiddleCenter, RoomDatabase.Hex("fff1cf"), FontStyle.Bold));
+            b.Hint.resizeTextForBestFit = true;
+            b.Hint.resizeTextMinSize = Mathf.Max(11, hintSize / 2);
+            b.Hint.resizeTextMaxSize = hintSize;
+            LayoutMenuLabels(b);
 
             // Подсветка главной кнопки — как у выбранной карты.
             b.Glow = UIKit.Image("Glow", rt, new Color(1, 0.85f, 0.2f, 0.9f), Sprites.Shadow);
@@ -147,14 +179,14 @@ namespace CardHome
             return b;
         }
 
-        // Главную кнопку подсвечиваем; пояснение — второй строкой.
+        // Главную кнопку подсвечиваем; пояснение — второй строкой (отдельным текстом).
         void StyleMenuButton(MenuBtn b, bool primary, bool enabled, string hint)
         {
             b.Button.interactable = enabled;
             b.Glow.enabled = primary && enabled;
-            b.Label.text = string.IsNullOrEmpty(hint)
-                ? b.Title
-                : $"{b.Title}\n<size={b.HintSize}><color=#fff1cf>{hint}</color></size>";
+            b.Label.text = b.Title;
+            b.Hint.text = hint ?? "";
+            LayoutMenuLabels(b);
         }
 
         // Квадратная кнопка-значок, как кнопка меню «≡» в партии.
@@ -172,7 +204,7 @@ namespace CardHome
             var img = UIKit.Image("Icon", rt, Color.white, icon);
             img.raycastTarget = false;
             img.preserveAspect = true;
-            UIKit.Stretch(img.rectTransform, size * 0.19f); // иконка ~62% кнопки
+            UIKit.Stretch(img.rectTransform, size * 0.23f); // иконка ~54% кнопки — не прижимается к ободу
             return b;
         }
 

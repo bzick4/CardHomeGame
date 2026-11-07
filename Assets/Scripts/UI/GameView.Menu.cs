@@ -489,7 +489,7 @@ namespace CardHome
 
         RectTransform backsRoot, backsContent, backsGrid, backsPreview;
         Text backsTierText, backsInfo;
-        Button backsEquip, backsTest;
+        Button backsEquip;
         int backsTier, previewCode;
 
         void BuildBacks()
@@ -521,7 +521,6 @@ namespace CardHome
             backsEquip = Place(UIKit.Button(backsContent, "ВЫБРАТЬ", RestartColor, () => game?.EquipBack(previewCode), C.ButtonFont), 210, -440, 440, 110);
             Place(UIKit.Button(backsContent, "СТРАННИК", SkipColor, () => PreviewBack(CardBacks.DefaultCode), Fc(C.ButtonFont - 6)), 210, -570, 440, 96);
 
-            backsTest = Place(UIKit.Button(backsContent, "", RoomDatabase.Hex("5a4632"), () => game?.ToggleTestBacks(), Fc(C.ButtonFont - 8)), 0, -800, 620, 96);
         }
 
         void OpenBacks()
@@ -628,8 +627,6 @@ namespace CardHome
             SetLabel(backsEquip, equipped ? "ВЫБРАНА" : "ВЫБРАТЬ");
             backsEquip.interactable = canUse && !equipped;
 
-            SetLabel(backsTest, game.TestAllBacks ? "ТЕСТ: ВСЕ ОТКРЫТЫ — ВКЛ" : "ТЕСТ: ВСЕ ОТКРЫТЫ — ВЫКЛ");
-            UIKit.Paint(backsTest, game.TestAllBacks ? RoomDatabase.Hex("f59a2c") : SkipColor);
         }
 
         // Зелёная галочка в углу (пройдено, выбрано) — значок Icons/Check.

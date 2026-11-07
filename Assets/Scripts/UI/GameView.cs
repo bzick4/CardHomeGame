@@ -579,8 +579,10 @@ namespace CardHome
             foreach (var t in new[] { statsText, phaseText, logText }) t.transform.SetParent(panel, false);
             oppRoot.SetParent(panel, false);
             UIKit.TopBand(statsText.rectTransform, 18, 56 * s, 18);
-            statsBar = statsText.rectTransform;
-            AttachStatsRight(statsBar, 0);
+            var statsBand = UIKit.Rect("StatsBand", panel);
+            UIKit.TopBand(statsBand, 18, 56 * s, 18);
+            statsBar = statsBand;
+            AttachStatsRight(statsBand, 0);
             float y = 18 + 56 * s + 6;
             UIKit.TopBand(phaseText.rectTransform, y, 80 * s, 18);
             y += 80 * s + 8;

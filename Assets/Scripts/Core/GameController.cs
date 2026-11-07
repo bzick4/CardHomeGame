@@ -161,6 +161,8 @@ namespace CardHome
         void Start()
         {
             Progress = SaveSystem.LoadProgress();
+            // Рубашку, выбранную когда-то в тестовом режиме коллекции (его больше нет), но не полученную, — сбросить.
+            if (!OwnsBack(Progress.EquippedBack)) Progress.EquippedBack = CardBacks.DefaultCode;
             Sfx.Muted = Progress.Muted;
             ShowMenu(); // игра всегда начинается с главного меню
         }
@@ -313,10 +315,7 @@ namespace CardHome
 
         // ───────────── Рубашки ─────────────
 
-        // Тестовый режим коллекции: все рубашки открыты (не сохраняется).
-        public bool TestAllBacks { get; private set; }
-
-        public bool OwnsBack(int code) => code == CardBacks.DefaultCode || TestAllBacks || Progress.Backs.Contains(code);
+        public bool OwnsBack(int code) => code == CardBacks.DefaultCode || Progress.Backs.Contains(code);
 
         public void EquipBack(int code)
         {
@@ -326,13 +325,6 @@ namespace CardHome
             Changed?.Invoke();
         }
 
-        public void ToggleTestBacks()
-        {
-            TestAllBacks = !TestAllBacks;
-            // Выбранную в тесте чужую рубашку не оставляем после выключения.
-            if (!TestAllBacks && !OwnsBack(Progress.EquippedBack)) EquipBack(CardBacks.DefaultCode);
-            Changed?.Invoke();
-        }
 
         // ───────────── Уровень ─────────────
 
