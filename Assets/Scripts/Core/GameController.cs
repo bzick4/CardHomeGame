@@ -163,7 +163,7 @@ namespace CardHome
             Progress = SaveSystem.LoadProgress();
             // Рубашку, выбранную когда-то в тестовом режиме коллекции (его больше нет), но не полученную, — сбросить.
             if (!OwnsBack(Progress.EquippedBack)) Progress.EquippedBack = CardBacks.DefaultCode;
-            Sfx.Muted = Progress.Muted;
+            ApplySettings();
             ShowMenu(); // игра всегда начинается с главного меню
         }
 
@@ -261,10 +261,28 @@ namespace CardHome
             Changed?.Invoke();
         }
 
+        public void ToggleReduceEffects()
+        {
+            Progress.ReduceEffects = !Progress.ReduceEffects;
+            ApplySettings();
+            SaveSystem.SaveProgress(Progress);
+            Changed?.Invoke();
+        }
+
+        void ApplySettings()
+        {
+            Sfx.Muted = Progress.Muted;
+            Juice.Reduced = Progress.ReduceEffects;
+        }
+
+        // Новые данные прогресса с прежними настройками (звук, эффекты).
+        ProgressData FreshProgress() => new ProgressData { Muted = Progress.Muted, ReduceEffects = Progress.ReduceEffects };
+
         public void ResetProgress()
         {
             SaveSystem.ResetAll();
-            Progress = new ProgressData { TutorialDone = true, Muted = Sfx.Muted };
+            Progress = FreshProgress();
+            Progress.TutorialDone = true;
             SaveSystem.SaveProgress(Progress);
             Changed?.Invoke();
         }
@@ -274,12 +292,12 @@ namespace CardHome
         // Есть ли что продолжать: пройденное обучение, открытые дома или начатый день.
         public bool HasProgress => Progress.TutorialDone || Progress.Unlocked > 0 || SaveSystem.HasRun;
 
-        // «Новая игра»: всё с нуля (кроме настройки звука) и сразу обучение.
+        // «Новая игра»: всё с нуля (кроме настроек) и сразу обучение.
         public void NewGame()
         {
-            bool muted = Progress.Muted;
+            var fresh = FreshProgress();
             SaveSystem.ResetAll();
-            Progress = new ProgressData { Muted = muted };
+            Progress = fresh;
             SaveSystem.SaveProgress(Progress);
             StartTutorial();
         }

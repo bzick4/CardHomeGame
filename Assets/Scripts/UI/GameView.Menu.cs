@@ -79,7 +79,7 @@ namespace CardHome
 
         MenuBtn continueBtn, newGameBtn, wanderBtn, backsBtn;
         RectTransform confirmRoot, settingsRoot, settingsContent;
-        MenuBtn soundBtn, tutorialBtn, resetBtn;
+        MenuBtn soundBtn, effectsBtn, tutorialBtn, resetBtn;
         bool resetArmed;
 
         void BuildMainMenu()
@@ -204,12 +204,13 @@ namespace CardHome
         void BuildSettings()
         {
             settingsRoot = Overlay("Settings", 0.6f, out settingsContent);
-            var box = WoodWindow(settingsContent, new Vector2(880, 900), "НАСТРОЙКИ");
+            var box = WoodWindow(settingsContent, new Vector2(880, 1060), "НАСТРОЙКИ");
             var size = new Vector2(760, 136);
-            soundBtn = MakeMenuButton(box, NightColor, "Звук", new Vector2(0, 230), size, () => game?.ToggleSound());
-            tutorialBtn = MakeMenuButton(box, RotateColor, "Обучение", new Vector2(0, 75), size, () => game?.StartTutorial());
-            resetBtn = MakeMenuButton(box, RoomDatabase.Hex("c8483c"), "Сбросить прогресс", new Vector2(0, -80), size, OnReset);
-            var close = MakeMenuButton(box, RestartColor, "Закрыть", new Vector2(0, -280), new Vector2(460, 110),
+            soundBtn = MakeMenuButton(box, NightColor, "Звук", new Vector2(0, 330), size, () => game?.ToggleSound());
+            effectsBtn = MakeMenuButton(box, NightColor, "Меньше эффектов", new Vector2(0, 175), size, () => game?.ToggleReduceEffects());
+            tutorialBtn = MakeMenuButton(box, RotateColor, "Обучение", new Vector2(0, 20), size, () => game?.StartTutorial());
+            resetBtn = MakeMenuButton(box, RoomDatabase.Hex("c8483c"), "Сбросить прогресс", new Vector2(0, -135), size, OnReset);
+            var close = MakeMenuButton(box, RestartColor, "Закрыть", new Vector2(0, -345), new Vector2(460, 110),
                 () => settingsRoot.gameObject.SetActive(false));
             StyleMenuButton(close, false, true, null);
         }
@@ -241,6 +242,10 @@ namespace CardHome
             if (soundBtn == null) return;
             StyleMenuButton(soundBtn, false, true, Sfx.Muted ? "выключен" : "включён");
             SetMenuIcon(soundBtn, UiArt.Icon(Sfx.Muted ? "SoundOff" : "SoundOn"));
+            bool calm = Juice.Reduced;
+            StyleMenuButton(effectsBtn, false, true, calm ? "включено: без тряски и пауз" : "выключено");
+            SetMenuIcon(effectsBtn, UiArt.Icon("Gear"));
+            effectsBtn.Glow.enabled = calm;
             SetMenuIcon(tutorialBtn, UiArt.Icon("Info"));
             StyleMenuButton(tutorialBtn, false, true, "пройти ещё раз");
             StyleMenuButton(resetBtn, false, true, resetArmed ? "нажми ещё раз — всё удалится" : "дома, звёзды, рубашки, забег");

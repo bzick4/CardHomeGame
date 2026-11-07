@@ -178,6 +178,7 @@ namespace CardHome
         void OnDestroy()
         {
             Unbind();
+            Juice.ResetTime();
             if (locationMat != null) Destroy(locationMat);
             if (guestDissolve != null) Destroy(guestDissolve);
         }
@@ -281,6 +282,8 @@ namespace CardHome
             root.anchorMin = new Vector2(safe.xMin / Screen.width, safe.yMin / Screen.height);
             root.anchorMax = new Vector2(safe.xMax / Screen.width, safe.yMax / Screen.height);
             root.offsetMin = root.offsetMax = Vector2.zero;
+            Juice.ScreenRoot = root; // «тряска экрана» — только игровой экран, без оверлеев
+            Juice.ResetTime();
 
             BuildCommon();
             BuildOpponent();
