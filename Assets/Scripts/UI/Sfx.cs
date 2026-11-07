@@ -19,21 +19,14 @@ namespace CardHome
         public static void Step() => Play("Step", 0.35f, 0.12f, MakeStep);
         public static void Knock() => Play("Knock", 0.7f, 0.05f, MakeKnock);
         public static void Creak() => Play("Creak", 0.3f, 0.15f, MakeCreak);
-        public static void Trap() { Play("Trap", 0.9f, 0.05f, MakeTrap); Vibrate(); }
+        public static void Trap() => Play("Trap", 0.9f, 0.05f, MakeTrap);
         public static void Coin() => Play("Coin", 0.45f, 0.08f, MakeCoin);
-        public static void Break() { Play("Break", 0.8f, 0.1f, MakeBreak); Vibrate(); }
+        public static void Break() => Play("Break", 0.8f, 0.1f, MakeBreak);
         public static void Owl() => Play("Owl", 0.5f, 0.03f, MakeOwl);
         public static void Click() => Play("Click", 0.35f, 0.1f, MakeClick);
         public static void Plop() => Play("Plop", 0.6f, 0.1f, MakePlop);
         public static void Fanfare() => Play("Fanfare", 0.6f, 0, MakeFanfare);
         public static void Card() => Play("Card", 0.5f, 0.12f, MakeCard);
-
-        static void Vibrate()
-        {
-#if UNITY_ANDROID || UNITY_IOS
-            Handheld.Vibrate();
-#endif
-        }
 
         static void Play(string name, float volume, float pitchJitter, Func<float[]> make)
         {

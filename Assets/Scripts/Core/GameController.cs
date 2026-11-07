@@ -269,14 +269,24 @@ namespace CardHome
             Changed?.Invoke();
         }
 
+        public void ToggleVibration()
+        {
+            Progress.NoVibration = !Progress.NoVibration;
+            ApplySettings();
+            SaveSystem.SaveProgress(Progress);
+            if (Haptic.Enabled) Haptic.Medium(); // включили — сразу почувствовать
+            Changed?.Invoke();
+        }
+
         void ApplySettings()
         {
             Sfx.Muted = Progress.Muted;
+            Haptic.Enabled = !Progress.NoVibration;
             Juice.Reduced = Progress.ReduceEffects;
         }
 
-        // Новые данные прогресса с прежними настройками (звук, эффекты).
-        ProgressData FreshProgress() => new ProgressData { Muted = Progress.Muted, ReduceEffects = Progress.ReduceEffects };
+        // Новые данные прогресса с прежними настройками (звук, вибрация, эффекты).
+        ProgressData FreshProgress() => new ProgressData { Muted = Progress.Muted, NoVibration = Progress.NoVibration, ReduceEffects = Progress.ReduceEffects };
 
         public void ResetProgress()
         {

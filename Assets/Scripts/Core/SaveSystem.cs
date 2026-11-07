@@ -13,6 +13,7 @@ namespace CardHome
         public List<int> Stars = new List<int>();         // звёзды по уровням (0 — не пройден)
         public List<int> Heirlooms = new List<int>();     // карты-наследство (RoomType)
         public bool Muted;
+        public bool NoVibration;                          // вибрация выключена
         public bool ReduceEffects;                        // «Меньше эффектов»: без тряски, пауз и замедлений
         public List<int> Backs = new List<int>();         // полученные рубашки (коды CardBacks)
         public int EquippedBack;                          // 0 — обычная «Странник»

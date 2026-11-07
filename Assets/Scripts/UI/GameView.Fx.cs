@@ -117,6 +117,7 @@ namespace CardHome
         void PlayCatch(Vector2Int cell, int reward)
         {
             Sfx.Trap();
+            Haptic.Medium();
             Juice.HitStop(0.08f);
             var tile = tiles[cell.x, cell.y].Root;
             Juice.Shake(tile, 20, 0.35f, 28);
@@ -134,6 +135,7 @@ namespace CardHome
         void PlayRobbery(Vector2Int cell, int gold)
         {
             Sfx.Break();
+            Haptic.Heavy();
             Juice.ScreenShake(12, 0.4f);
             tiles[cell.x, cell.y].FlashBad();
             if (gold < 0)
@@ -146,6 +148,7 @@ namespace CardHome
         // Гость ушёл недовольным: сердца репутации дрожат и мигают, «−1» с сердцем.
         void PlayUnhappy(Vector2 boardPos, int reputation)
         {
+            Haptic.Medium();
             if (reputation < 0)
                 Juice.FloatText(gridRoot, boardPos + new Vector2(0, L.Cell * 0.4f), "−" + (-reputation), Bad, UiArt.Icon("Heart"), L.StatsFont + 6);
             if (statHearts == null) return;

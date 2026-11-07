@@ -711,7 +711,11 @@ namespace CardHome
             if (phase != Phase.Night) ClearPorch();
             ShowOverlays(phase, true);
             ShowMenus(phase, true);
-            if (phase == Phase.GameOver && !game.Won) Sfx.Break();
+            if (phase == Phase.GameOver && !game.Won)
+            {
+                Sfx.Break();
+                Haptic.Heavy();
+            }
         }
 
         void Refresh()
@@ -1088,6 +1092,7 @@ namespace CardHome
                 .Append(rt.DOScale(1, 0.13f).SetEase(Ease.InQuad))
                 .AppendCallback(() => Juice.Squash(rt, 0.16f, 0.35f));
             Sfx.Plop();
+            Haptic.Light();
             Burst(gridRoot, "TileOk", CellPos(p), L.Cell * 1.3f, 0, 0.55f);
             // Улучшенная комната — с искрами.
             var room = game.Grid.Get(p);
@@ -1159,6 +1164,7 @@ namespace CardHome
         void AnimateBroken(Vector2Int p)
         {
             Juice.ScreenShake(16, 0.45f);
+            Haptic.Heavy();
             tiles[p.x, p.y].PlayBreak();
             Burst(gridRoot, "Dust", CellPos(p), L.Cell * 1.3f, 0.15f);
             Sfx.Break();

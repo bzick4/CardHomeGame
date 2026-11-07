@@ -210,6 +210,7 @@ namespace CardHome
         {
             if (selectable != null && !selectable.interactable) return;
             down = true;
+            Haptic.Light();
             transform.DOKill(true);
             transform.DOScale(baseScale * Pressed, 0.06f).SetEase(Ease.OutQuad).SetLink(gameObject);
         }
