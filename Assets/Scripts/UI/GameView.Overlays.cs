@@ -63,6 +63,7 @@ namespace CardHome
             UIKit.Stretch(o);
             var img = UIKit.Image("Dim", o, new Color(0.03f, 0.02f, 0.08f, dim));
             UIKit.Stretch(img.rectTransform);
+            overlayDims[o] = (img, dim);
             content = UIKit.Rect("Content", o);
             UIKit.Place(content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1080, 1920));
             content.localScale = Vector3.one * OverlayScale;
@@ -83,12 +84,50 @@ namespace CardHome
             return b;
         }
 
+        // Окно появляется: затемнение плавно густеет, содержимое выскакивает с пружинкой.
+        readonly Dictionary<RectTransform, (Image dim, float alpha)> overlayDims = new Dictionary<RectTransform, (Image, float)>();
+        readonly HashSet<RectTransform> closingOverlays = new HashSet<RectTransform>();
+
         void Pop(RectTransform content)
         {
-            float s = OverlayScale;
+            var root = (RectTransform)content.parent;
+            closingOverlays.Remove(root);
             content.DOKill();
-            content.localScale = Vector3.one * s;
-            content.DOScale(s, 0.4f).From(s * 0.6f).SetEase(Ease.OutBack).SetLink(content.gameObject);
+            Juice.PopIn(content, 0.35f, OverlayScale);
+            if (overlayDims.TryGetValue(root, out var d))
+            {
+                d.dim.DOKill();
+                var c = d.dim.color;
+                c.a = 0;
+                d.dim.color = c;
+                d.dim.DOFade(d.alpha, 0.25f).SetLink(d.dim.gameObject);
+            }
+        }
+
+        // Окно закрывается: содержимое сжимается, затемнение тает, потом окно выключается.
+        void CloseOverlay(RectTransform root)
+        {
+            if (root == null || !root.gameObject.activeSelf || closingOverlays.Contains(root)) return;
+            var content = root.Find("Content") as RectTransform;
+            if (content == null)
+            {
+                root.gameObject.SetActive(false);
+                return;
+            }
+            closingOverlays.Add(root);
+            if (overlayDims.TryGetValue(root, out var d))
+            {
+                d.dim.DOKill();
+                d.dim.DOFade(0, 0.2f).SetLink(d.dim.gameObject);
+            }
+            Juice.PopOut(content, 0.28f, () =>
+            {
+                // Окно могли открыть снова, пока оно закрывалось.
+                if (!closingOverlays.Remove(root) || root == null) return;
+                root.gameObject.SetActive(false);
+                content.localScale = Vector3.one * OverlayScale;
+                if (overlayDims.TryGetValue(root, out var dd)) dd.dim.color = new Color(dd.dim.color.r, dd.dim.color.g, dd.dim.color.b, dd.alpha);
+            });
         }
 
         static void Clear(Transform t)
@@ -98,6 +137,8 @@ namespace CardHome
 
         void BuildOverlays()
         {
+            overlayDims.Clear();
+            closingOverlays.Clear();
             BuildSummaryOverlay();
             BuildRewardOverlay();
             BuildRemoveOverlay();
@@ -114,9 +155,20 @@ namespace CardHome
         {
             void Toggle(RectTransform r, RectTransform content, bool on)
             {
-                bool was = r.gameObject.activeSelf;
-                r.gameObject.SetActive(on);
-                if (on && !was && animate) Pop(content);
+                bool was = r.gameObject.activeSelf && !closingOverlays.Contains(r);
+                if (!on)
+                {
+                    if (animate) CloseOverlay(r);
+                    else r.gameObject.SetActive(false);
+                    return;
+                }
+                r.gameObject.SetActive(true);
+                if (!was && animate)
+                {
+                    Pop(content);
+                    if (r == gameOverRoot) AnimateGameOver();
+                    if (r == inheritRoot) AnimateLevelDone();
+                }
             }
 
             Toggle(rewardRoot, rewardContent, phase == Phase.Reward);
@@ -129,8 +181,15 @@ namespace CardHome
             if (phase == Phase.LevelDone) AnimateStars();
 
             bool summary = phase == Phase.Summary;
-            bool wasSummary = summaryRoot.gameObject.activeSelf;
-            summaryRoot.gameObject.SetActive(summary);
+            bool wasSummary = summaryRoot.gameObject.activeSelf && !closingOverlays.Contains(summaryRoot);
+            if (summary)
+            {
+                closingOverlays.Remove(summaryRoot);
+                summaryRoot.gameObject.SetActive(true);
+                if (!wasSummary && animate) Pop(summaryContent);
+            }
+            else if (animate) CloseOverlay(summaryRoot);
+            else summaryRoot.gameObject.SetActive(false);
             if (summary && (!wasSummary || !animate)) BuildSummary(animate);
         }
 
@@ -371,16 +430,36 @@ namespace CardHome
 
         static void SetLabel(Button b, string text) => b.GetComponentInChildren<Text>().text = text;
 
+        string rewardKey;   // набор наград, уже показанный: выезжать заново — только при новом наборе
+        bool rewardPicking; // выбранная карта празднуется, остальные уезжают — повторные нажатия игнорируем
+
         void RefreshReward()
         {
             Clear(rewardCards);
+            string key = game.Night + ":" + game.RewardLevel + ":" + string.Join(",", game.RewardOptions);
+            bool fresh = key != rewardKey;
+            rewardKey = key;
+            rewardPicking = false;
+            var built = new List<RectTransform>();
             for (int i = 0; i < game.RewardOptions.Count; i++)
             {
                 int index = i;
                 var def = RoomDatabase.Get(game.RewardOptions[i]);
-                var card = BuildCard(rewardCards, def, () => game?.PickReward(index), game.RewardLevel);
+                var card = BuildCard(rewardCards, def, () => PickReward(index, built), game.RewardLevel);
                 UIKit.Place(card, new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f),
                     new Vector2(L.CardGap + i * (L.CardW + L.CardGap) + L.CardW / 2, 0), new Vector2(L.CardW, L.CardH));
+                built.Add(card);
+                if (fresh)
+                {
+                    // Карты выезжают снизу по очереди.
+                    var group = card.gameObject.AddComponent<CanvasGroup>();
+                    group.alpha = 0;
+                    var to = card.anchoredPosition;
+                    card.anchoredPosition = to - new Vector2(0, L.CardH * 0.9f);
+                    float delay = 0.2f + i * 0.1f;
+                    card.DOAnchorPos(to, 0.45f).SetDelay(delay).SetEase(Ease.OutBack).SetLink(card.gameObject);
+                    group.DOFade(1, 0.2f).SetDelay(delay).SetLink(card.gameObject);
+                }
             }
 
             // В странствии лавки между ночами нет — она на ярмарках.
@@ -407,6 +486,31 @@ namespace CardHome
             SetLabel(repairButton, broken > 0 ? $"Починить всё ({broken})" : "Починить всё\nвсё цело");
             SetPrice(repairButton, GameController.RepairPrice, broken > 0);
             repairButton.interactable = broken > 0 && gold >= GameController.RepairPrice;
+        }
+
+        // Выбранная награда подпрыгивает в искрах, остальные уезжают вниз и тают — потом ход игре.
+        void PickReward(int index, List<RectTransform> cardsShown)
+        {
+            if (rewardPicking || game == null) return;
+            rewardPicking = true;
+            for (int i = 0; i < cardsShown.Count; i++)
+            {
+                var c = cardsShown[i];
+                if (c == null) continue;
+                if (i == index)
+                {
+                    DOVirtual.DelayedCall(0.08f, () => Juice.Punch(c, 0.18f, 0.3f)).SetLink(c.gameObject);
+                    Burst(c, "Sparkles", Vector2.zero, L.CardW * 1.3f, 0.15f, 0.9f);
+                    continue;
+                }
+                if (!c.TryGetComponent<CanvasGroup>(out var group)) group = c.gameObject.AddComponent<CanvasGroup>();
+                group.blocksRaycasts = false;
+                c.DOKill();
+                c.DOAnchorPosY(c.anchoredPosition.y - L.CardH * 0.6f, 0.35f).SetEase(Ease.InQuad).SetLink(c.gameObject);
+                group.DOFade(0, 0.3f).SetLink(c.gameObject);
+            }
+            Sfx.Coin();
+            DOVirtual.DelayedCall(0.45f, () => game?.PickReward(index)).SetLink(gameObject);
         }
 
         // ───────────── Колода в лавке: убрать или улучшить карту ─────────────
@@ -437,7 +541,7 @@ namespace CardHome
         void CloseRemove()
         {
             removeOpen = false;
-            if (removeRoot != null) removeRoot.gameObject.SetActive(false);
+            CloseOverlay(removeRoot);
         }
 
         void RefreshRemove()
@@ -595,7 +699,7 @@ namespace CardHome
             deckInfo = Label(deckContent, "", C.BodyFont + 2, Color.white, 610, 80, 1000, FontStyle.Normal);
             deckGrid = UIKit.Rect("Cards", deckContent);
             UIKit.Place(deckGrid, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1020, 1000));
-            Place(UIKit.Button(deckContent, "ЗАКРЫТЬ", RestartColor, () => deckRoot.gameObject.SetActive(false), Fc(C.ButtonFont - 4)), 0, -640, 380, 100);
+            Place(UIKit.Button(deckContent, "ЗАКРЫТЬ", RestartColor, () => CloseOverlay(deckRoot), Fc(C.ButtonFont - 4)), 0, -640, 380, 100);
         }
 
         void OpenDeckView()
@@ -656,10 +760,66 @@ namespace CardHome
             gameOverIcon.raycastTarget = false;
             gameOverIcon.preserveAspect = true;
             UIKit.Place(gameOverIcon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 470), new Vector2(240, 240));
+            // Золотой луч за кубком — только при победе.
+            gameOverBeam = UIKit.Image("Beam", gameOverContent, Color.white, FxArt("BeamGold"));
+            gameOverBeam.raycastTarget = false;
+            gameOverBeam.preserveAspect = true;
+            UIKit.Place(gameOverBeam.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 420), new Vector2(760, 760));
+            gameOverBeam.rectTransform.SetAsFirstSibling();
+            gameOverBeam.enabled = false;
             gameOverTitle = Label(gameOverContent, "", C.StatsFont + 40, Gold, 260, 140);
             gameOverBody = Label(gameOverContent, "", C.StatsFont, Color.white, 60, 260, 1000, FontStyle.Bold);
             Place(UIKit.Button(gameOverContent, "ЕЩЁ РАЗ", RestartColor, () => game?.RetryLevel(), C.ButtonFont), 0, -180, 520, 120);
             Place(UIKit.Button(gameOverContent, "В МЕНЮ", SkipColor, () => game?.ShowMenu(), Fc(C.ButtonFont - 4)), 0, -330, 420, 100);
+        }
+
+        Image gameOverBeam;
+
+        // Победа: замедление, луч и кубок с пружинкой. Поражение: заголовок дрожит, череп проявляется без подскока.
+        void AnimateGameOver()
+        {
+            bool won = game.Won;
+            var icon = gameOverIcon.rectTransform;
+            gameOverBeam.enabled = won && gameOverBeam.sprite != null;
+            if (won)
+            {
+                Juice.SlowMo(0.4f, 0.8f);
+                icon.localScale = Vector3.zero;
+                DOVirtual.DelayedCall(0.15f, () => Juice.PopIn(icon, 0.5f)).SetLink(icon.gameObject);
+                if (gameOverBeam.enabled) SpinBeam(gameOverBeam);
+            }
+            else
+            {
+                icon.DOKill();
+                icon.localScale = Vector3.one * 0.7f;
+                icon.DOScale(1, 0.5f).SetEase(Ease.OutQuad).SetLink(icon.gameObject);
+                gameOverIcon.DOKill();
+                gameOverIcon.color = new Color(1, 1, 1, 0);
+                gameOverIcon.DOFade(1, 0.5f).SetLink(gameOverIcon.gameObject);
+                DOVirtual.DelayedCall(0.3f, () => Juice.Shake(gameOverTitle.rectTransform, 22, 0.5f, 24)).SetLink(gameOverTitle.gameObject);
+            }
+        }
+
+        // Дом выстоял: замедление и кубок с пружинкой.
+        void AnimateLevelDone()
+        {
+            Juice.SlowMo(0.4f, 0.8f);
+            var trophy = inheritContent.Find("Trophy") as RectTransform;
+            if (trophy == null) return;
+            trophy.localScale = Vector3.zero;
+            DOVirtual.DelayedCall(0.15f, () => Juice.PopIn(trophy, 0.5f)).SetLink(trophy.gameObject);
+        }
+
+        // Луч медленно вращается и «дышит», пока окно открыто.
+        static void SpinBeam(Image beam)
+        {
+            var rt = beam.rectTransform;
+            rt.DOKill();
+            beam.DOKill();
+            rt.localEulerAngles = Vector3.zero;
+            rt.DORotate(new Vector3(0, 0, -360), 14f, RotateMode.FastBeyond360).SetEase(Ease.Linear).SetLoops(-1).SetLink(beam.gameObject);
+            beam.color = new Color(1, 1, 1, 0);
+            beam.DOFade(0.9f, 0.6f).SetLink(beam.gameObject);
         }
 
         void RefreshGameOver()

@@ -211,7 +211,7 @@ namespace CardHome
             tutorialBtn = MakeMenuButton(box, RotateColor, "Обучение", new Vector2(0, 20), size, () => game?.StartTutorial());
             resetBtn = MakeMenuButton(box, RoomDatabase.Hex("c8483c"), "Сбросить прогресс", new Vector2(0, -135), size, OnReset);
             var close = MakeMenuButton(box, RestartColor, "Закрыть", new Vector2(0, -345), new Vector2(460, 110),
-                () => settingsRoot.gameObject.SetActive(false));
+                () => CloseOverlay(settingsRoot));
             StyleMenuButton(close, false, true, null);
         }
 
