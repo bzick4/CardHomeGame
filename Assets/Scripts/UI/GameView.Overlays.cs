@@ -217,9 +217,10 @@ namespace CardHome
 
             int goldDelta = game.Gold - report.GoldBefore;
             int repDelta = game.Reputation - report.ReputationBefore;
-            string g = goldDelta >= 0 ? $"<color=#ffd34d>● +{goldDelta}</color>" : $"<color=#ff6b5e>● {goldDelta}</color>";
+            string g = goldDelta >= 0 ? "<color=#ffd34d>● +{0}</color>" : "<color=#ff6b5e>● −{0}</color>";
             string r = repDelta == 0 ? "<color=#ff6b6b>♥ без потерь</color>" : $"<color=#ff6b5e>♥ {repDelta}</color>";
-            var totals = UIKit.Outlined(UIKit.Text(summaryPanel, $"{g}        {r}", C.StatsFont + 12, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 3);
+            string totalsFormat = g + "        " + r.Replace("{", "{{").Replace("}", "}}");
+            var totals = UIKit.Outlined(UIKit.Text(summaryPanel, string.Format(totalsFormat, Mathf.Abs(goldDelta)), C.StatsFont + 12, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold), 3);
             UIKit.TopBand(totals.rectTransform, top + 10, 110, 30);
             items.Add(totals.rectTransform);
 
@@ -234,16 +235,25 @@ namespace CardHome
                 return;
             }
 
-            // Строки появляются по очереди, потом монеты летят в счётчик.
+            // Строки выскакивают по очереди, итог докручивается, потом оставшиеся монеты летят в счётчик.
+            const float RowStep = 0.12f;
             for (int i = 0; i < items.Count; i++)
             {
-                var group = items[i].gameObject.AddComponent<CanvasGroup>();
+                var item = items[i];
+                var group = item.gameObject.AddComponent<CanvasGroup>();
                 group.alpha = 0;
-                group.DOFade(1, 0.3f).SetDelay(0.25f + i * 0.22f).SetLink(group.gameObject);
-                items[i].DOAnchorPosX(-60, 0.35f).From(isRelative: true).SetDelay(0.25f + i * 0.22f).SetEase(Ease.OutCubic)
-                    .SetLink(items[i].gameObject);
+                item.localScale = Vector3.one * 0.6f;
+                bool isTotals = item == totals.rectTransform;
+                DOVirtual.DelayedCall(0.25f + i * RowStep, () =>
+                {
+                    group.DOFade(1, 0.15f).SetLink(group.gameObject);
+                    Juice.PopIn(item, 0.3f);
+                    if (isTotals) Juice.CountTo(totals, 0, Mathf.Abs(goldDelta), 0.5f, totalsFormat);
+                }).SetLink(item.gameObject);
             }
-            FlyCoins(totals.rectTransform, report.GoldBefore, game.Gold, 0.4f + items.Count * 0.22f);
+            // Ночью часть монет уже долетела до счётчика — досчитываем от показанного.
+            DOTween.Kill("goldCount", true);
+            FlyCoins(totals.rectTransform, goldHeld ? shownGold : report.GoldBefore, game.Gold, 0.85f + items.Count * RowStep);
         }
 
         // Монеты летят из итогов в счётчик золота, и счётчик растёт с каждой.

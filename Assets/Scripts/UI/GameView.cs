@@ -694,7 +694,8 @@ namespace CardHome
             if (phase == Phase.Night)
             {
                 goldHeld = true;
-                shownGold = game.Report.GoldBefore;
+                shownGold = goldGoal = game.Report.GoldBefore;
+                Juice.SlowMo(0.5f, 0.9f); // небо темнеет медленнее — «наступает ночь»
                 Sfx.Owl();
             }
             else if (phase != Phase.Summary)
@@ -1157,8 +1158,9 @@ namespace CardHome
 
         void AnimateBroken(Vector2Int p)
         {
+            Juice.ScreenShake(16, 0.45f);
             tiles[p.x, p.y].PlayBreak();
-            Burst(gridRoot, "Dust", CellPos(p), L.Cell * 1.2f, 0.15f);
+            Burst(gridRoot, "Dust", CellPos(p), L.Cell * 1.3f, 0.15f);
             Sfx.Break();
         }
     }

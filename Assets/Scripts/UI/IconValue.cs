@@ -14,14 +14,16 @@ namespace CardHome
 
         public IconValue(Transform parent, Sprite sprite, int fontSize, Color color, float iconSize = 0)
         {
-            this.iconSize = iconSize > 0 ? iconSize : fontSize * 1.25f;
-            gap = fontSize * 0.2f;
+            // Без значка — только число.
+            this.iconSize = sprite == null ? 0 : iconSize > 0 ? iconSize : fontSize * 1.25f;
+            gap = sprite == null ? 0 : fontSize * 0.2f;
             Root = UIKit.Rect("IconValue", parent);
             Root.sizeDelta = new Vector2(this.iconSize, this.iconSize);
 
             icon = UIKit.Image("Icon", Root, Color.white, sprite);
             icon.raycastTarget = false;
             icon.preserveAspect = true;
+            icon.enabled = sprite != null;
             UIKit.Place(icon.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), Vector2.zero, Vector2.one * this.iconSize);
 
             label = UIKit.Outlined(UIKit.Text(Root, "", fontSize, TextAnchor.MiddleLeft, color, FontStyle.Bold));

@@ -290,6 +290,7 @@ namespace CardHome
                 .Join(card.Root.DOScale(revealScale, 0.45f).SetEase(Ease.OutBack))
                 .Join(card.Root.DOLocalRotate(Vector3.zero, 0.3f))
                 .Append(card.Flip(true))
+                .AppendCallback(() => Juice.Squash(card.Root, 0.12f, 0.35f))
                 .AppendInterval(g.IsThreat || g.Special ? 1.6f : 1.1f)
                 .Append(card.Root.DOMove(porchSlot.TransformPoint(porchSlot.rect.center), 0.42f).SetEase(Ease.InOutCubic))
                 .Join(card.Root.DOScale(porchScale, 0.42f).SetEase(Ease.InOutCubic))
@@ -297,7 +298,7 @@ namespace CardHome
                 .OnComplete(() =>
                 {
                     PutOnPorch(card);
-                    porchCard.Root.DOPunchScale(Vector3.one * 0.06f, 0.25f, 6).SetLink(porchCard.Root.gameObject);
+                    Juice.Squash(porchCard.Root, 0.14f, 0.3f);
                     nightAnim = false;
                     nightSeq = null;
                     if (pendingRebuild) Rebuild();
@@ -407,45 +408,45 @@ namespace CardHome
                 guestLight.color = g.IsThreat ? new Color(1, 0.45f, 0.35f, 0.4f) : new Color(1, 0.85f, 0.5f, 0.4f);
                 UpdateMood(g, mood);
                 Sfx.Knock();
-                // Призраки появляются из дымки.
+                // Призраки появляются из дымки, Хозяин дома ещё и встряхивает дом.
                 if (IsGhost(g)) Burst(gridRoot, "GhostSmoke", outside, L.Cell * 1.1f, 0.3f, 1.1f);
+                if (g.Id == "GhostLord") Juice.ScreenShake(8, 0.4f);
             });
             seq.Append(guestVisual.DOScale(1, 0.25f).From(0.2f).SetEase(Ease.OutBack));
             seq.AppendInterval(0.2f);
 
             var rnd = new System.Random(res.Steps.Count * 31 + g.Id.Length);
-            foreach (var step in res.Steps)
+            bool ghost = IsGhost(g);
+            for (int i = 0; i < res.Steps.Count; i++)
             {
-                var s = step;
+                var s = res.Steps[i];
+                bool robbery = res.Outcome == Outcome.Robbed && i == res.Steps.Count - 1;
                 AppendHop(seq, CellPos(s.Pos), 0.32f, rnd.Next(100) < 18);
                 seq.AppendCallback(() =>
                 {
                     mood += s.Delta;
                     UpdateMood(g, mood);
-                    if (s.Delta != 0)
-                    {
-                        FloatingNumber(s.Delta);
-                        BurstAtGuest(s.Delta > 0 ? "MoodUp" : "MoodDown", 0.75f);
-                    }
-                    if (s.Trap)
-                    {
-                        Sfx.Trap();
-                        BurstAtGuest("Shield", 0.9f, 0.15f);
-                        BurstAtGuest("Dust", 1.1f, 0.05f);
-                        guestVisual.DOShakeAnchorPos(0.4f, 12, 30).SetLink(guestVisual.gameObject);
-                    }
+                    if (ghost) Burst(gridRoot, "GhostSmoke", CellPos(s.Pos), L.Cell * 0.9f, 0.25f, 0.9f);
+                    if (s.Delta != 0) FloatingNumber(s.Delta);
+                    if (s.Trap) PlayCatch(s.Pos, res.Gold);
+                    if (robbery) PlayRobbery(s.Pos, res.Gold);
                     if (!string.IsNullOrEmpty(s.Text)) game?.AddLog(s.Text);
                 });
-                if (!string.IsNullOrEmpty(s.Text)) seq.AppendInterval(s.Trap ? 0.8f : 0.45f);
+                if (!string.IsNullOrEmpty(s.Text)) seq.AppendInterval(s.Trap ? 1.0f : robbery ? 0.7f : 0.45f);
             }
 
             AppendHop(seq, outside, 0.3f, false);
             if (guestDissolve != null) seq.Append(guestDissolve.DOFloat(1, "_Dissolve", 0.4f).SetEase(Ease.InQuad));
-            // Итог гостя у двери: золото — монеты, плюс к репутации — сердце.
+            // Итог гостя у двери: доволен — сердце и монеты в копилку, недоволен — минус репутации.
             seq.AppendCallback(() =>
             {
-                if (res.Gold > 0) Burst(gridRoot, "Coins", outside, L.Cell * 0.9f, 0.5f, 1f);
-                if (res.Reputation > 0) Burst(gridRoot, "Heart", outside + new Vector2(L.Cell * 0.5f, 0), L.Cell * 0.9f, 0.5f, 1f);
+                if (res.Outcome == Outcome.Satisfied)
+                {
+                    Burst(gridRoot, "Heart", outside + new Vector2(L.Cell * 0.4f, 0), L.Cell * 0.9f, 0.5f, 1f);
+                    CoinsToCounter(outside, res.Gold);
+                }
+                else if (res.Outcome == Outcome.Unhappy) PlayUnhappy(outside, res.Reputation);
+                else if (res.Gold > 0 && res.Outcome != Outcome.Caught) CoinsToCounter(outside, res.Gold);
             });
             seq.Append(guestVisual.DOScale(0.2f, 0.15f).SetEase(Ease.InBack));
             seq.AppendCallback(() => guestToken.gameObject.SetActive(false));
@@ -461,8 +462,12 @@ namespace CardHome
             });
             seq.Append(guestToken.DOAnchorPos(to, duration).SetEase(Ease.InOutSine));
             seq.Join(guestVisual.DOAnchorPosY(height, duration / 2).SetEase(Ease.OutQuad).SetLoops(2, LoopType.Yoyo));
-            seq.AppendCallback(Sfx.Step);
-            seq.Append(guestVisual.DOScale(new Vector3(1.18f, 0.82f, 1), 0.06f).SetLoops(2, LoopType.Yoyo));
+            seq.AppendCallback(() =>
+            {
+                Sfx.Step();
+                Juice.Squash(guestVisual, 0.18f, 0.26f);
+            });
+            seq.AppendInterval(0.1f);
         }
 
         void UpdateMood(GuestDef g, int mood)
@@ -477,22 +482,13 @@ namespace CardHome
             moodFillImg.color = mood >= g.Need ? Good : mood > 0 ? RoomDatabase.Hex("ffb834") : Bad;
         }
 
-        // «+3» / «−2» всплывает над гостем и тает.
+        // «+3» / «−2» со значком настроения всплывает над гостем; шкала вздрагивает.
         void FloatingNumber(int delta)
         {
-            var t = UIKit.Outlined(UIKit.Text(gridRoot, (delta > 0 ? "+" : "−") + Mathf.Abs(delta),
-                L.StatsFont + 10, TextAnchor.MiddleCenter, delta > 0 ? Good : Bad, FontStyle.Bold), 3);
-            var rt = t.rectTransform;
-            rt.sizeDelta = new Vector2(160, 70);
-            rt.anchoredPosition = guestToken.anchoredPosition + new Vector2(L.Cell * 0.3f, L.Cell * 0.3f);
-
-            DOTween.Sequence()
-                .Append(rt.DOScale(1.2f, 0.15f).From(0.4f).SetEase(Ease.OutBack))
-                .Join(rt.DOAnchorPosY(L.Cell * 0.5f, 0.9f).SetRelative().SetEase(Ease.OutCubic))
-                .Append(rt.DOScale(1f, 0.2f))
-                .Insert(0.55f, t.DOFade(0, 0.35f))
-                .SetLink(t.gameObject)
-                .OnComplete(() => Destroy(t.gameObject));
+            var pos = guestToken.anchoredPosition + new Vector2(L.Cell * 0.3f, L.Cell * 0.35f);
+            Juice.FloatText(gridRoot, pos, (delta > 0 ? "+" : "−") + Mathf.Abs(delta), delta > 0 ? Good : Bad,
+                FxArt(delta > 0 ? "MoodUp" : "MoodDown"), L.StatsFont + 6);
+            if (moodBar.gameObject.activeInHierarchy) Juice.Punch(moodBar, 0.15f, 0.22f);
         }
 
         // ───────────── Маршрут гостя на входе ─────────────

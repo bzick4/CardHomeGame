@@ -190,7 +190,7 @@ namespace CardHome
             root.sizeDelta = new Vector2(10, fontSize * 1.4f);
             var group = root.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
-            var value = new IconValue(root, icon, fontSize, c, icon != null ? fontSize * 1.2f : 0.01f);
+            var value = new IconValue(root, icon, fontSize, c, fontSize * 1.2f);
             value.Set(text);
             var v = value.Root;
             v.anchorMin = v.anchorMax = v.pivot = new Vector2(0.5f, 0.5f);
