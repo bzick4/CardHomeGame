@@ -107,9 +107,14 @@ namespace CardHome
             b.onClick.AddListener(() => { Sfx.Click(); onClick(); });
             root.gameObject.AddComponent<PressScale>();
 
+            // Текст — с полями от рамки (по бокам уголки нарисованной кнопки) и сам ужимается, если не влезает.
             var t = Outlined(Text(body.transform, label, fontSize, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold));
-            Stretch(t.rectTransform, 6);
-            t.rectTransform.anchoredPosition = new Vector2(0, 3);
+            t.rectTransform.anchorMin = new Vector2(0.1f, 0.14f);
+            t.rectTransform.anchorMax = new Vector2(0.9f, 0.86f);
+            t.rectTransform.offsetMin = t.rectTransform.offsetMax = Vector2.zero;
+            t.resizeTextForBestFit = true;
+            t.resizeTextMinSize = Mathf.Max(12, Mathf.RoundToInt(fontSize * 0.55f));
+            t.resizeTextMaxSize = fontSize;
             return b;
         }
 

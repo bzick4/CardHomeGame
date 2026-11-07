@@ -338,7 +338,10 @@ namespace CardHome
             img.preserveAspect = true;
             UIKit.Place(img.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(18, 6), new Vector2(84, 84));
             var label = b.GetComponentInChildren<Text>();
-            label.rectTransform.offsetMin = new Vector2(104, label.rectTransform.offsetMin.y);
+            label.rectTransform.anchorMin = new Vector2(0, 0.14f);
+            label.rectTransform.anchorMax = new Vector2(1, 0.86f);
+            label.rectTransform.offsetMin = new Vector2(108, 0);
+            label.rectTransform.offsetMax = new Vector2(-24, 0);
             label.resizeTextForBestFit = true;
             label.resizeTextMinSize = C.MinFont;
             label.resizeTextMaxSize = font;

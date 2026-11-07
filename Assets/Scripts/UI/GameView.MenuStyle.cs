@@ -133,12 +133,13 @@ namespace CardHome
         {
             var rt = (RectTransform)b.Button.transform;
             float h = rt.rect.height > 1 ? rt.rect.height : rt.sizeDelta.y;
-            float left = b.Icon != null && b.Icon.enabled ? h * 0.95f : h * 0.3f;
-            float right = h * 0.3f; // не заезжать на металлические уголки кнопки
+            // Поля: слева — под значок, справа — от металлических уголков; сверху и снизу — от рамки.
+            float left = b.Icon != null && b.Icon.enabled ? h * 1.05f : h * 0.45f;
+            float right = h * 0.45f;
             bool hasHint = !string.IsNullOrEmpty(b.Hint.text);
-            Band(b.Label.rectTransform, hasHint ? 0.4f : 0.1f, 0.92f, left, right);
+            Band(b.Label.rectTransform, hasHint ? 0.47f : 0.2f, hasHint ? 0.84f : 0.8f, left, right);
             b.Hint.gameObject.SetActive(hasHint);
-            if (hasHint) Band(b.Hint.rectTransform, 0.1f, 0.44f, left, right);
+            if (hasHint) Band(b.Hint.rectTransform, 0.17f, 0.45f, left, right);
 
             static void Band(RectTransform t, float y0, float y1, float l, float r)
             {
@@ -152,7 +153,7 @@ namespace CardHome
         MenuBtn MakeMenuButton(RectTransform parent, Color color, string title, Vector2 pos, Vector2 size, System.Action onClick)
         {
             var b = new MenuBtn { Title = title.ToUpper() };
-            int titleSize = M.ButtonFont + 6;
+            int titleSize = M.ButtonFont;
             b.Button = UIKit.Button(parent, b.Title, color, onClick, titleSize);
             var rt = (RectTransform)b.Button.transform;
             UIKit.Place(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
@@ -162,7 +163,7 @@ namespace CardHome
             b.Label.resizeTextMinSize = Mathf.Max(12, titleSize / 2);
             b.Label.resizeTextMaxSize = titleSize;
 
-            int hintSize = Fm(M.BodyFont - 2);
+            int hintSize = Mathf.RoundToInt(M.BodyFont * 0.8f);
             b.Hint = UIKit.Outlined(UIKit.Text(b.Body.transform, "", hintSize, TextAnchor.MiddleCenter, RoomDatabase.Hex("fff1cf"), FontStyle.Bold));
             b.Hint.resizeTextForBestFit = true;
             b.Hint.resizeTextMinSize = Mathf.Max(11, hintSize / 2);
