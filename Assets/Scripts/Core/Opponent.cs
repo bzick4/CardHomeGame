@@ -21,9 +21,10 @@ namespace CardHome
         {
             this.level = level;
             this.rng = rng;
+            // Все обычные гости — поровну, в любом доме. Боссы — только если дом (или странствие) их добавляет.
             template = customDeck != null
                 ? customDeck.ToList()
-                : level.House.Guests.SelectMany(e => Enumerable.Repeat(e.guest, e.count)).ToList();
+                : GuestDatabase.Pool.Concat(level.House.Guests.Where(e => e.guest.Boss).Select(e => e.guest)).ToList();
             template.AddRange(level.ExtraGuests);
 
             // Колода конечная, как в ККИ: хватает на стартовую руку и все ночи дома с небольшим запасом.
@@ -41,7 +42,7 @@ namespace CardHome
         public const int OpeningHand = 5;
         public const int MaxHand = 10;
 
-        // Взять n карт. Со 2-й ночи вместо карты с шансом 15% приходит особый гость.
+        // Взять n карт. В последние ночи вместо карты изредка приходит хозяин дома.
         // Пустая колода — карт больше нет; полная рука — лишняя карта сгорает.
         public void Draw(int n, int night, bool allowSpecials)
         {
@@ -49,12 +50,8 @@ namespace CardHome
             {
                 var g = deckCards[deckCards.Count - 1];
                 deckCards.RemoveAt(deckCards.Count - 1);
-                if (allowSpecials && night >= 2 && rng.Next(100) < GuestDatabase.SpecialChance)
-                {
-                    bool boss = night >= LevelInfo.Nights - 1 && rng.Next(100) < 30;
-                    var special = boss ? GuestDatabase.GhostLord : GuestDatabase.Specials[rng.Next(GuestDatabase.Specials.Length)];
-                    g = level.Make(special);
-                }
+                if (allowSpecials && night >= LevelInfo.Nights - 1 && rng.Next(100) < GuestDatabase.BossChance)
+                    g = level.Make(GuestDatabase.GhostLord);
                 if (handCards.Count < MaxHand) handCards.Add(g);
             }
         }
@@ -83,13 +80,14 @@ namespace CardHome
         static bool Playable(GuestDef g, int night) =>
             g.Boss ? night >= LevelInfo.Nights - 1 : !g.IsThreat || night >= 3;
 
-        // Какую карту из руки сыграть. Если играть нечем — в руку приходит путник.
+        // Какую карту из руки сыграть. Если играть нечем — в руку приходит случайный гость, которого уже можно.
         public int Choose(HouseGrid grid, int night, float malice)
         {
             var playable = Enumerable.Range(0, handCards.Count).Where(i => Playable(handCards[i], night)).ToList();
             if (playable.Count == 0)
             {
-                handCards.Add(level.Make(GuestDatabase.Traveler));
+                var allowed = GuestDatabase.Pool.Where(g => Playable(g, night)).ToList();
+                handCards.Add(level.Make(allowed[rng.Next(allowed.Count)]));
                 return handCards.Count - 1;
             }
 

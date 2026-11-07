@@ -151,6 +151,52 @@ namespace CardHome
             CatchReward = 4,
         };
 
+        public static readonly GuestDef Gourmet = new GuestDef
+        {
+            Id = "Gourmet",
+            Tagline = "Приехал ради ужина",
+            Name = "Гурман",
+            Description = "Живёт ради кухни и столовой, на сон ему всё равно. Выносливость 3, нужно настроение 7.",
+            Color = RoomDatabase.Hex("d9a441"),
+            Behaviour = GuestBehaviour.Wanderer,
+            Stamina = 3,
+            Need = 7,
+            CanBecomeRegular = true,
+            Likes = { { RoomType.Kitchen, 3 }, { RoomType.Dining, 3 }, { RoomType.Cellar, 1 }, { RoomType.Bath, -1 } },
+        };
+
+        public static readonly GuestDef Family = new GuestDef
+        {
+            Id = "Family",
+            Tagline = "Мама и шумный малыш",
+            Name = "Семья",
+            Description = "Ищут детскую и спальню, боятся подвала. Выносливость 5, нужно настроение 6.",
+            Color = RoomDatabase.Hex("7cc4a0"),
+            Behaviour = GuestBehaviour.Wanderer,
+            Stamina = 5,
+            Need = 6,
+            CanBecomeRegular = true,
+            Likes =
+            {
+                { RoomType.Nursery, 4 }, { RoomType.Bedroom, 2 }, { RoomType.Kitchen, 1 },
+                { RoomType.Library, -1 }, { RoomType.Cellar, -3 },
+            },
+        };
+
+        public static readonly GuestDef Vampire = new GuestDef
+        {
+            Id = "Vampire",
+            Tagline = "Ищет спящих гостей",
+            Name = "Вампир",
+            Description = "Кратчайшим путём крадётся в спальню. Дошёл — репутация −2. Поймай ловушкой — +6 золота.",
+            Color = RoomDatabase.Hex("8a3a5c"),
+            Behaviour = GuestBehaviour.Seeker,
+            SeekTarget = RoomType.Bedroom,
+            Trappable = true,
+            CatchReward = 6,
+            UnhappyPenalty = 2,
+        };
+
         // ───── Особые гости ─────
 
         public static readonly GuestDef Inspector = new GuestDef
@@ -223,11 +269,12 @@ namespace CardHome
             },
         };
 
-        public static readonly GuestDef[] Specials = { Inspector, Couple, Drunkard };
+        // Обычные гости: соперник берёт их поровну, без перекоса в какого-то одного.
+        public static readonly GuestDef[] Pool = { Traveler, Scholar, Ghost, Thief, Wolf, Inspector, Couple, Drunkard, Gourmet, Family, Vampire };
 
-        public const int SpecialChance = 15;
+        public const int BossChance = 5; // шанс хозяина дома вместо карты в две последние ночи
 
-        public static readonly GuestDef[] All = { Traveler, Scholar, Ghost, Thief, Wolf, Inspector, Couple, Drunkard, GhostLord };
+        public static readonly GuestDef[] All = { Traveler, Scholar, Ghost, Thief, Wolf, Inspector, Couple, Drunkard, Gourmet, Family, Vampire, GhostLord };
 
         public static GuestDef ById(string id)
         {

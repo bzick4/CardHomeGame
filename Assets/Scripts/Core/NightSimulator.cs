@@ -243,18 +243,18 @@ namespace CardHome
             }
 
             res.Outcome = Outcome.Robbed;
-            res.Reputation = -1;
+            res.Reputation = -g.UnhappyPenalty;
             res.Gold = -g.StealAmount;
             res.Summary = g.StealAmount > 0
-                ? $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: −{g.StealAmount} золота, репутация −1</color>"
-                : $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: репутация −1</color>";
+                ? $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: −{g.StealAmount} золота, репутация −{g.UnhappyPenalty}</color>"
+                : $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: репутация −{g.UnhappyPenalty}</color>";
 
             // С шансом 20% угроза разоряет свою цель.
             if (rng.Next(100) < BreakChance)
             {
                 res.Broke = path[path.Count - 1];
-                res.BreakText = g.SeekTarget == RoomType.Kitchen
-                    ? $"<color=#ff9a5e>{g.Name} разорил кухню</color>"
+                res.BreakText = g.SeekTarget == RoomType.Kitchen ? $"<color=#ff9a5e>{g.Name} разорил кухню</color>"
+                    : g.SeekTarget == RoomType.Bedroom ? $"<color=#ff9a5e>{g.Name} перевернул спальню</color>"
                     : $"<color=#ff9a5e>{g.Name} разгромил комнату «{target}»</color>";
             }
         }

@@ -12,6 +12,7 @@ namespace CardHome
     {
         static readonly Color ThiefRoute = RoomDatabase.Hex("ff6b5e");
         static readonly Color WolfRoute = RoomDatabase.Hex("ffb03a");
+        static readonly Color VampireRoute = RoomDatabase.Hex("c86bff");
         static readonly Color WalkRoute = RoomDatabase.Hex("fff1a8");
 
         const float PorchScale = 0.5f;  // карта гостя на входе
@@ -546,7 +547,10 @@ namespace CardHome
             int last = g.IsThreat && trap >= 0 ? trap : path.Count - 1;
             for (int i = 0; i <= last && i < path.Count; i++) points.Add(CellPos(path[i]));
 
-            var color = g.IsThreat ? (g.SeekTarget == RoomType.Kitchen ? WolfRoute : ThiefRoute) : WalkRoute;
+            var color = !g.IsThreat ? WalkRoute
+                : g.SeekTarget == RoomType.Kitchen ? WolfRoute
+                : g.SeekTarget == RoomType.Bedroom ? VampireRoute
+                : ThiefRoute;
             int dot = 0;
             float spacing = L.Step / 5f;
             for (int s = 0; s < points.Count - 1; s++)
