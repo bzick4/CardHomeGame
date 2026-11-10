@@ -13,6 +13,8 @@ namespace CardHome
         static readonly Color ThiefRoute = RoomDatabase.Hex("ff6b5e");
         static readonly Color WolfRoute = RoomDatabase.Hex("ffb03a");
         static readonly Color VampireRoute = RoomDatabase.Hex("c86bff");
+        static readonly Color RatsRoute = RoomDatabase.Hex("c9b08a");
+        static readonly Color FireRoute = RoomDatabase.Hex("ff7a2a");
         static readonly Color WalkRoute = RoomDatabase.Hex("fff1a8");
 
         const float PorchScale = 0.5f;  // карта гостя на входе
@@ -550,6 +552,8 @@ namespace CardHome
             var color = !g.IsThreat ? WalkRoute
                 : g.SeekTarget == RoomType.Kitchen ? WolfRoute
                 : g.SeekTarget == RoomType.Bedroom ? VampireRoute
+                : g.SeekTarget == RoomType.Cellar ? RatsRoute
+                : g.SeekTarget == RoomType.Fireplace ? FireRoute
                 : ThiefRoute;
             int dot = 0;
             float spacing = L.Step / 5f;

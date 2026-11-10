@@ -24,7 +24,7 @@ namespace CardHome
             // Все обычные гости — поровну, в любом доме. Боссы — только если дом (или странствие) их добавляет.
             template = customDeck != null
                 ? customDeck.ToList()
-                : GuestDatabase.Pool.Concat(level.House.Guests.Where(e => e.guest.Boss).Select(e => e.guest)).ToList();
+                : Available(level).Concat(level.House.Guests.Where(e => e.guest.Boss).Select(e => e.guest)).ToList();
             template.AddRange(level.ExtraGuests);
 
             // Колода конечная, как в ККИ: хватает на стартовую руку и все ночи дома с небольшим запасом.
@@ -37,6 +37,23 @@ namespace CardHome
                 GuestDatabase.Shuffle(rng, batch);
                 deckCards.AddRange(batch);
             }
+        }
+
+        // Обычные гости, которые уже открылись на этом уровне.
+        static IEnumerable<GuestDef> Available(LevelInfo level) => GuestDatabase.Pool.Where(g => g.MinStage <= level.Stage);
+
+        // Гости, которых соперник выложит первыми (план на первые ночи). Под них игрок получает стартовые карты.
+        readonly List<GuestDef> planned = new List<GuestDef>();
+
+        // Выбрать из руки до count мирных гостей, которых соперник сыграет первыми.
+        public IReadOnlyList<GuestDef> PlanOpening(int count, int night)
+        {
+            planned.Clear();
+            var options = handCards.Where(g => !g.IsThreat && Playable(g, night)).ToList();
+            GuestDatabase.Shuffle(rng, options);
+            planned.AddRange(options.Take(count));
+            if (planned.Count > 0) Log("план на первые ночи: " + string.Join(", ", planned.Select(g => g.Name)));
+            return planned;
         }
 
         public const int OpeningHand = 5;
@@ -54,6 +71,7 @@ namespace CardHome
                     g = level.Make(GuestDatabase.GhostLord);
                 if (handCards.Count < MaxHand) handCards.Add(g);
             }
+            Log($"ночь {night}: взял {n}");
         }
 
         // Восстановить колоду и руку из сохранения.
@@ -63,6 +81,7 @@ namespace CardHome
             deckCards.AddRange(deck);
             handCards.Clear();
             handCards.AddRange(hand);
+            Log("загружен из сохранения");
         }
 
         // Сыграть гостя из руки: он уходит из руки и возвращается вызвавшему.
@@ -70,11 +89,16 @@ namespace CardHome
         {
             var g = handCards[index];
             handCards.RemoveAt(index);
+            Log($"выложил «{g.Name}»");
             return g;
         }
 
         // Постоянный гость возвращается в колоду соперника.
-        public void ShuffleIn(GuestDef g) => deckCards.Insert(rng.Next(deckCards.Count + 1), g);
+        public void ShuffleIn(GuestDef g)
+        {
+            deckCards.Insert(rng.Next(deckCards.Count + 1), g);
+            Log($"«{g.Name}» вернулся в колоду");
+        }
 
         // Угрозы — с 3-й ночи, хозяин дома — только в две последние.
         static bool Playable(GuestDef g, int night) =>
@@ -83,11 +107,21 @@ namespace CardHome
         // Какую карту из руки сыграть. Если играть нечем — в руку приходит случайный гость, которого уже можно.
         public int Choose(HouseGrid grid, int night, float malice)
         {
+            // Сначала — запланированные гости, если они ещё в руке.
+            while (planned.Count > 0)
+            {
+                var next = planned[0];
+                planned.RemoveAt(0);
+                int at = handCards.IndexOf(next);
+                if (at >= 0 && Playable(next, night)) return at;
+            }
+
             var playable = Enumerable.Range(0, handCards.Count).Where(i => Playable(handCards[i], night)).ToList();
             if (playable.Count == 0)
             {
-                var allowed = GuestDatabase.Pool.Where(g => Playable(g, night)).ToList();
+                var allowed = Available(level).Where(g => Playable(g, night)).ToList();
                 handCards.Add(level.Make(allowed[rng.Next(allowed.Count)]));
+                Log($"играть нечем — в руку пришёл «{handCards[handCards.Count - 1].Name}»");
                 return handCards.Count - 1;
             }
 
@@ -107,6 +141,22 @@ namespace CardHome
                 }
             }
             return best;
+        }
+
+        // Отладка: состав колоды и руки в консоль. В релизной сборке вызовы вырезаются целиком.
+        [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        void Log(string what)
+        {
+            UnityEngine.Debug.Log($"<b>[Соперник]</b> {what}\n" +
+                $"Колода ({deckCards.Count}): {Count(deckCards)}\n" +
+                $"Рука ({handCards.Count}): {Count(handCards)}");
+        }
+
+        static string Count(IEnumerable<GuestDef> cards)
+        {
+            var groups = cards.GroupBy(g => g.Name).OrderByDescending(x => x.Count()).ThenBy(x => x.Key)
+                .Select(x => $"{x.Key} ×{x.Count()}").ToList();
+            return groups.Count == 0 ? "пусто" : string.Join(", ", groups);
         }
     }
 }

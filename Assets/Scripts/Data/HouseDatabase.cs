@@ -34,6 +34,10 @@ namespace CardHome
         static readonly int[] BaseGuests = { 1, 1, 2, 2, 2, 3, 3 };
 
         public int Index { get; init; }
+        // Номер уровня для открытия нового контента (гости, погода, карты): 1 — первый дом кампании.
+        // В странствии задаётся по шагу на карте.
+        int stage;
+        public int Stage { get => stage > 0 ? stage : Index + 1; init => stage = value; }
         public HouseDef House { get; init; }
         public int Tier { get; init; }
         public int NightCount { get; init; } = Nights;   // сколько ночей длится дом (в странствии — меньше)

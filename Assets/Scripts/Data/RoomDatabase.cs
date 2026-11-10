@@ -19,6 +19,7 @@ namespace CardHome
         Treasury,
         Nursery,
         Lounge,
+        WineCellar,
     }
 
     // Карта в колоде игрока: комната и её уровень. Уровни бесконечные:
@@ -68,6 +69,7 @@ namespace CardHome
         public string Tagline { get; init; }     // 3–5 слов на самой карте
         public Doors Doors { get; init; }
         public Color Color { get; init; }
+        public int MinStage { get; init; } = 1; // с какого уровня карта может выпасть в наградах
 
         // Коридоры не тратят выносливость гостя.
         public bool IsPassage => Type == RoomType.Corridor || Type == RoomType.Crossroad || Type == RoomType.Hall;
@@ -110,6 +112,8 @@ namespace CardHome
                 Doors.E | Doors.S | Doors.W, Hex("d68aa0"));
             Add(RoomType.Lounge, "Гостиная", "+2 любому гостю. Бывает только в наградах.",
                 Doors.E | Doors.S | Doors.W, Hex("5f9e6e"));
+            Add(RoomType.WineCellar, "Винный погреб", "+1 любому гостю. Гурману +3, пьянице +4 — но пьяный точно что-то сломает. Семье −2.",
+                Doors.E | Doors.S | Doors.W, Hex("7a2f45"), minStage: 3);
         }
 
         // Короткая подпись на карте (атмосфера, без цифр). Правила — в Description, их видно в просмотре.
@@ -129,22 +133,24 @@ namespace CardHome
             [RoomType.Treasury] = "Золото под замком",
             [RoomType.Nursery] = "Игрушки и колыбель",
             [RoomType.Lounge] = "Мягкие кресла и чай",
+            [RoomType.WineCellar] = "Лучшие вина округи",
         };
 
-        static void Add(RoomType t, string name, string desc, Doors doors, Color c)
+        static void Add(RoomType t, string name, string desc, Doors doors, Color c, int minStage = 1)
         {
-            Defs[t] = new RoomDef { Type = t, Name = name, Description = desc, Doors = doors, Color = c, Tagline = Taglines[t] };
+            Defs[t] = new RoomDef { Type = t, Name = name, Description = desc, Doors = doors, Color = c, Tagline = Taglines[t], MinStage = minStage };
         }
 
         public static RoomDef Get(RoomType t) => Defs[t];
 
         // Три разные карты на выбор после ночи. Гостиная выпадает чаще остальных, коридор — реже.
-        public static List<RoomType> RewardOffer(System.Random rng, int count)
+        // stage — номер уровня: новые комнаты появляются в наградах не сразу.
+        public static List<RoomType> RewardOffer(System.Random rng, int count, int stage)
         {
             var pool = new List<(RoomType type, int weight)>();
             foreach (var t in Defs.Keys)
             {
-                if (t == RoomType.Hall) continue;
+                if (t == RoomType.Hall || Defs[t].MinStage > stage) continue;
                 int w = t == RoomType.Lounge ? 4 : t == RoomType.Corridor || t == RoomType.Crossroad ? 1 : 2;
                 pool.Add((t, w));
             }

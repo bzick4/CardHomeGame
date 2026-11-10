@@ -157,6 +157,7 @@ namespace CardHome
             game.GuestPlayed += OnGuestPlayed;
             game.GuestWalk += OnGuestWalk;
             game.HintRequested += OnHint;
+            game.IntroRequested += OnIntro;
         }
 
         public void Unbind()
@@ -171,6 +172,12 @@ namespace CardHome
             game.GuestPlayed -= OnGuestPlayed;
             game.GuestWalk -= OnGuestWalk;
             game.HintRequested -= OnHint;
+            game.IntroRequested -= OnIntro;
+            if (introView != null) introView.Detach();
+            if (currentIntro != null) game.Gate = null;
+            intros.Clear();
+            currentIntro = null;
+            introView = null;
             game = null;
         }
 
@@ -301,6 +308,7 @@ namespace CardHome
 
             if (game.IsTutorial)
                 tutorial = TutorialView.Create(this, game, transform, tutorialStep);
+            RestoreIntro();
         }
 
         // Создаёт элементы; расставляют их Arrange* ниже.
@@ -783,6 +791,7 @@ namespace CardHome
                 case Phase.Day:
                 {
                     string status = $"Ходов: {game.ActionsLeft} · Рука {game.Hand.Count}/{GameController.MaxHand}";
+                    if (game.Weather != NightWeather.Clear) status += $" · Ночью {game.WeatherName.ToLower()}";
                     bool explain = game.IsTutorial || (!game.IsWander && game.Level.Index < 2);
                     if (game.ActionsLeft <= 0) return "Ходы закончились — жми «Ночь»";
                     if (!explain) return status;
@@ -815,7 +824,8 @@ namespace CardHome
             if (game == null || statsText == null) return;
             int gold = goldHeld ? shownGold : game.Gold;
             string title = game.IsTutorial ? "ОБУЧЕНИЕ · ДЕНЬ 0"
-                : $"{game.Level.Title.ToUpper()} · НОЧЬ {Mathf.Min(game.Night, game.MaxNights)}/{game.MaxNights}";
+                : $"{game.Level.Title.ToUpper()} · НОЧЬ {Mathf.Min(game.Night, game.MaxNights)}/{game.MaxNights}"
+                  + (game.Weather != NightWeather.Clear ? " · " + game.WeatherName.ToUpper() : "");
             statsText.text = title;
 
             // Справа: сердца (полные и пустые до начального запаса) и золото рядом.

@@ -39,6 +39,8 @@ namespace CardHome
     public class RunSave
     {
         public int Level, Night, Gold, Reputation, Actions, Fatigue;
+        public int Weather;  // погода на ближайшую ночь (NightWeather)
+        public bool Cat;     // в доме живёт кошка
         public List<RoomSave> Rooms = new List<RoomSave>();
         public List<int> Deck = new List<int>(), Discard = new List<int>(), Hand = new List<int>();
         public List<string> OppDeck = new List<string>(), OppHand = new List<string>();

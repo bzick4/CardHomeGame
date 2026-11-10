@@ -10,6 +10,9 @@ namespace CardHome
     // и ведёт игрока по шагам. Нажать можно только то, что разрешает текущий шаг
     // (затемнение ловит касания, а контроллер дополнительно проверяет TutorialGate).
     // Без Update: шаги переключаются по событиям контроллера.
+    //
+    // Тот же экран показывает и мини-обучения (CreateIntro): короткие шаги при первой встрече
+    // с новым гостем, погодой или картой. Пока они идут, всё остальное заблокировано, кнопки «Пропустить» нет.
     public class TutorialView : MonoBehaviour
     {
         static readonly Color DimColor = new Color(0.02f, 0.01f, 0.06f, 0.72f);
@@ -18,7 +21,7 @@ namespace CardHome
         static readonly Color Ink = RoomDatabase.Hex("3b2a1e");
         static readonly Color Wood = RoomDatabase.Hex("4a2e20");
 
-        class Step
+        public class Step
         {
             public string Text { get; init; }
             public Func<RectTransform> Target { get; init; }
@@ -35,12 +38,16 @@ namespace CardHome
         readonly List<Step> steps = new List<Step>();
         int index = -1;
         bool attached;
+        bool intro;               // мини-обучение: свои шаги, по окончании — закрыться
+        Action<int> stepChanged;
+        Action finished;
 
         RectTransform root, frame, bubble, arrow, skipRoot;
         CanvasGroup group;
         readonly Image[] dims = new Image[4];
         Text text;
         Image tail;
+        Image holeBlock;          // на шагах с кнопкой «Далее» закрывает и само «окно»
         Button nextButton;
 
         public static TutorialView Create(GameView view, GameController game, Transform parent, int startStep)
@@ -48,6 +55,21 @@ namespace CardHome
             var rt = UIKit.Rect("Tutorial", parent);
             UIKit.Stretch(rt);
             var t = rt.gameObject.AddComponent<TutorialView>();
+            t.Init(view, game, startStep);
+            return t;
+        }
+
+        // Мини-обучение из готовых шагов. stepChanged — чтобы пережить перестройку экрана, finished — по последнему шагу.
+        public static TutorialView CreateIntro(GameView view, GameController game, Transform parent,
+            List<Step> steps, int startStep, Action<int> stepChanged, Action finished)
+        {
+            var rt = UIKit.Rect("Intro", parent);
+            UIKit.Stretch(rt);
+            var t = rt.gameObject.AddComponent<TutorialView>();
+            t.intro = true;
+            t.steps.AddRange(steps);
+            t.stepChanged = stepChanged;
+            t.finished = finished;
             t.Init(view, game, startStep);
             return t;
         }
@@ -60,7 +82,7 @@ namespace CardHome
             root = (RectTransform)transform;
             group = gameObject.AddComponent<CanvasGroup>();
             BuildVisuals();
-            BuildSteps();
+            if (!intro) BuildSteps();
 
             game.Changed += Check;
             game.PhaseChanged += OnPhase;
@@ -234,9 +256,14 @@ namespace CardHome
 
         void Show(int i)
         {
-            if (i >= steps.Count) return;
+            if (i >= steps.Count)
+            {
+                if (intro) Finish();
+                return;
+            }
             index = i;
-            view.SetTutorialStep(i);
+            if (intro) stepChanged?.Invoke(i);
+            else view.SetTutorialStep(i);
             var s = steps[i];
 
             // Разрешаем только то, что нужно на этом шаге.
@@ -269,6 +296,20 @@ namespace CardHome
             if (s.Done != null && s.Done()) Show(i + 1);
         }
 
+        // Мини-обучение пройдено: снять блокировку и закрыться.
+        void Finish()
+        {
+            if (!attached) return;
+            Detach();
+            if (game != null) game.Gate = null;
+            group.blocksRaycasts = false;
+            var done = finished;
+            finished = null;
+            group.DOKill();
+            group.DOFade(0, 0.2f).SetLink(gameObject).OnComplete(() => Destroy(gameObject));
+            done?.Invoke();
+        }
+
         void OnNext()
         {
             if (index < 0 || index >= steps.Count) return;
@@ -286,6 +327,10 @@ namespace CardHome
                 dims[i] = UIKit.Image("Dim", root, DimColor);
                 dims[i].raycastTarget = true; // ловит все касания мимо «окна»
             }
+
+            holeBlock = UIKit.Image("HoleBlock", root, Color.clear);
+            holeBlock.raycastTarget = true;
+            holeBlock.gameObject.SetActive(false);
 
             // Подсветка цели — золотая рамка BoardOverlays/TileHighlight, мягко мерцает.
             var highlight = UiArt.TileHighlight;
@@ -333,6 +378,8 @@ namespace CardHome
             UIKit.Place((RectTransform)nextButton.transform, new Vector2(1, 0), new Vector2(1, 0.5f), new Vector2(-30, 0), new Vector2(320, 90));
 
             // Пропустить обучение можно в любой момент — кнопка всегда поверх затемнения.
+            // У мини-обучения её нет: оно короткое и должно быть пройдено.
+            if (intro) return;
             skipRoot = UIKit.Rect("Skip", (RectTransform)transform.parent);
             UIKit.Stretch(skipRoot);
             var skip = UIKit.Button(skipRoot, "ПРОПУСТИТЬ", RoomDatabase.Hex("8a7f72"), () => game?.SkipTutorial(), Fs(L.ButtonFont - 10));
@@ -378,6 +425,9 @@ namespace CardHome
 
             frame.gameObject.SetActive(hasHole);
             arrow.gameObject.SetActive(hasHole);
+            // Шаг-пояснение: подсвеченное тоже нельзя нажать, только «Далее».
+            holeBlock.gameObject.SetActive(hasHole && s.Button != null && s.Done == null);
+            if (hasHole) SetRect(holeBlock, hole);
             if (hasHole) SetRect(frame, new Rect(hole.xMin - 6, hole.yMin - 6, hole.width + 12, hole.height + 12));
 
             // Пузырь — там, где больше места: над окном или под ним.

@@ -138,6 +138,7 @@ namespace CardHome
                 Index = tier * HouseDatabase.Count + n.House,
                 House = HouseDatabase.All[n.House],
                 Tier = tier,
+                Stage = 2 + n.Row + (elite ? 1 : 0) + (n.Kind == NodeKind.Boss ? 4 : 0),
                 NightCount = WanderNights,
                 NightOffset = Mathf.Min(4, n.Row / 2 + (n.Kind == NodeKind.Boss ? 4 : 0) + (elite ? 2 : 0)),
                 MaliceBonus = elite ? 0.25f : 0,
@@ -185,7 +186,7 @@ namespace CardHome
 
             // Награда после каждой ночи; после последней — карта в колоду и обратно на карту.
             rewardOptions.Clear();
-            rewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3));
+            rewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3, Level.Stage));
             SetPhase(Phase.Reward);
             Changed?.Invoke();
         }
@@ -215,7 +216,7 @@ namespace CardHome
         void OpenFair()
         {
             fairOffers.Clear();
-            var types = RoomDatabase.RewardOffer(rng, 3);
+            var types = RoomDatabase.RewardOffer(rng, 3, Level.Stage);
             for (int i = 0; i < types.Count; i++)
             {
                 // Одна карта на ярмарке — сразу бронзовая, подороже.
@@ -343,7 +344,7 @@ namespace CardHome
         // Случайная карта из наградного набора нужного уровня.
         public Card AddRandomRunCard(int level)
         {
-            var type = RoomDatabase.RewardOffer(rng, 1)[0];
+            var type = RoomDatabase.RewardOffer(rng, 1, Level.Stage)[0];
             if (!RoomDatabase.Get(type).CanUpgrade) level = 1;
             return AddRunCard(new Card(type, level));
         }

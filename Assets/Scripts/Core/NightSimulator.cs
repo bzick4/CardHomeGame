@@ -26,6 +26,11 @@ namespace CardHome
         // Последствия: сломанная комната и гость, который вернётся.
         public Vector2Int? Broke { get; internal set; }
         public string BreakText { get; internal set; }
+        // Пожар: кроме Broke сгорают и эти комнаты.
+        public List<Vector2Int> Burned { get; } = new List<Vector2Int>();
+        // Проклятие ведьмы: эта комната станет подвалом.
+        public Vector2Int? Cursed { get; internal set; }
+        public string CurseText { get; internal set; }
         public bool BecomesRegular { get; internal set; }
     }
 
@@ -54,6 +59,12 @@ namespace CardHome
                 return -1;
             }
 
+            if (g.Snob && !room.Def.IsPassage && room.Level < 2)
+            {
+                notes.Add("простовато");
+                return 0;
+            }
+
             int v = g.Like(room.Type);
             if (g.EdgeHater && !room.Def.IsPassage)
             {
@@ -70,6 +81,10 @@ namespace CardHome
                 case RoomType.Lounge:
                     v += 2;
                     notes.Add("диван +2");
+                    break;
+                case RoomType.WineCellar:
+                    v += 1;
+                    notes.Add("вино +1");
                     break;
                 case RoomType.Kitchen:
                     if (v > 0 && grid.IsAdjacentTo(p, RoomType.Dining))
@@ -106,11 +121,13 @@ namespace CardHome
             }
 
             int warm = grid.AdjacentLevel(p, RoomType.Fireplace);
+            if (grid.Weather == NightWeather.Storm) warm *= 2; // в грозу камин греет вдвое
             if (warm > 0 && room.Type != RoomType.Fireplace && !room.Def.IsPassage)
             {
                 int w = g.HatesWarmth ? -warm : warm;
                 v += w;
                 notes.Add(w > 0 ? $"тепло +{w}" : $"жарко {w}");
+                if (grid.Weather == NightWeather.Storm && w > 0) notes[notes.Count - 1] += " (гроза)";
             }
             return v;
         }
@@ -121,6 +138,8 @@ namespace CardHome
             var rooms = new List<Vector2Int>(); // где гость побывал (для поломок)
             var cur = grid.Entrance;
             int stamina = g.Stamina;
+            if (grid.Weather == NightWeather.Storm) stamina = Mathf.Max(1, stamina - 1); // в грозу все устают быстрее
+            bool drankWine = false;
 
             while (stamina > 0)
             {
@@ -166,11 +185,19 @@ namespace CardHome
 
                 visited.Add(pick.target);
                 cur = pick.target;
+                if (room.Type == RoomType.WineCellar && room.Working) drankWine = true;
                 if (!room.Def.IsPassage)
                 {
                     stamina--;
                     if (room.Working) rooms.Add(pick.target);
                 }
+            }
+
+            // Полнолуние тревожит призраков.
+            if (g.Moonstruck && grid.Weather == NightWeather.FullMoon)
+            {
+                res.Mood -= 2;
+                res.Steps.Add(new GuestStep { Pos = cur, Delta = -2, Text = $"{g.Name}: полнолуние тревожит −2" });
             }
 
             // Инспектор в конце пересчитывает двери, ведущие в стену.
@@ -204,8 +231,21 @@ namespace CardHome
                 res.Summary = $"<color=#e08080>{g.Name} недоволен ({res.Mood}/{g.Need}). Репутация −{g.UnhappyPenalty}</color>";
             }
 
-            // Недовольный гость с шансом 20% что-нибудь ломает. Пьяница — даже довольный.
+            // Ведьма недовольна — комната, где она закончила путь, становится подвалом.
+            if (g.Curser && res.Outcome == Outcome.Unhappy)
+            {
+                var spot = rooms.LastOrDefault(p => grid.Get(p).Type != RoomType.Cellar);
+                if (rooms.Any(p => grid.Get(p).Type != RoomType.Cellar))
+                {
+                    res.Cursed = spot;
+                    res.CurseText = $"<color=#b48cff>{g.Name} прокляла комнату «{grid.Get(spot).Def.Name}» — теперь там подвал</color>";
+                }
+                return;
+            }
+
+            // Недовольный гость с шансом 20% что-нибудь ломает. Пьяница — даже довольный, а после погреба — почти наверняка.
             int chance = Mathf.Max(res.Outcome == Outcome.Unhappy ? BreakChance : 0, g.BreakChance);
+            if (drankWine && g.BreakChance > 0) chance = 90;
             if (rooms.Count > 0 && rng.Next(100) < chance)
             {
                 var p = rooms[rng.Next(rooms.Count)];
@@ -222,9 +262,14 @@ namespace CardHome
             if (path == null)
             {
                 res.Outcome = Outcome.Nothing;
-                res.Summary = $"{g.Name} не нашёл, где {target}, и ушёл ни с чем";
+                res.Summary = g.FearsCat && grid.Cat
+                    ? $"{g.Name} учуяли кошку и разбежались"
+                    : $"{g.Name} не нашёл, где {target}, и ушёл ни с чем";
                 return;
             }
+
+            // В полнолуние волк вдвое опаснее — и вдвое ценнее, если попадётся.
+            int moon = g.Moonstruck && grid.Weather == NightWeather.FullMoon ? 2 : 1;
 
             for (int i = 0; i < path.Count; i++)
             {
@@ -232,7 +277,7 @@ namespace CardHome
                 var room = grid.Get(p);
                 if (i == trapIndex)
                 {
-                    int reward = g.CatchReward * room.Level;
+                    int reward = g.CatchReward * room.Level * moon;
                     res.Steps.Add(new GuestStep { Pos = p, Text = $"{g.Name} попался в ловушку!", Trap = true });
                     res.Outcome = Outcome.Caught;
                     res.Gold = reward;
@@ -242,12 +287,30 @@ namespace CardHome
                 res.Steps.Add(new GuestStep { Pos = p, Text = $"{g.Name} крадётся: {room.Def.Name}" });
             }
 
+            int penalty = g.UnhappyPenalty * moon;
             res.Outcome = Outcome.Robbed;
-            res.Reputation = -g.UnhappyPenalty;
+            res.Reputation = -penalty;
             res.Gold = -g.StealAmount;
             res.Summary = g.StealAmount > 0
-                ? $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: −{g.StealAmount} золота, репутация −{g.UnhappyPenalty}</color>"
-                : $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: репутация −{g.UnhappyPenalty}</color>";
+                ? $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: −{g.StealAmount} золота, репутация −{penalty}</color>"
+                : $"<color=#e08080>{g.Name} добрался до комнаты «{target}»: репутация −{penalty}</color>";
+
+            // Поджигатель: горит цель и все соседние комнаты (кроме прихожей).
+            if (g.Arsonist)
+            {
+                var fire = path[path.Count - 1];
+                res.Broke = fire;
+                foreach (var d in DoorsUtil.All)
+                {
+                    var q = fire + DoorsUtil.Offset(d);
+                    var n = grid.Get(q);
+                    if (n != null && n.Type != RoomType.Hall && n.Working) res.Burned.Add(q);
+                }
+                res.BreakText = res.Burned.Count > 0
+                    ? $"<color=#ff9a5e>{g.Name} устроил пожар: сгорели камин и соседние комнаты ({res.Burned.Count})</color>"
+                    : $"<color=#ff9a5e>{g.Name} поджёг камин</color>";
+                return;
+            }
 
             // С шансом 20% угроза разоряет свою цель.
             if (rng.Next(100) < BreakChance)
@@ -264,6 +327,7 @@ namespace CardHome
         public static List<Vector2Int> SeekerRoute(HouseGrid grid, GuestDef g, out int trapIndex)
         {
             trapIndex = -1;
+            if (g.FearsCat && grid.Cat) return null; // кошка в доме — крысы не сунутся
             var path = ShortestPathTo(grid, grid.Entrance, g.SeekTarget);
             if (path == null) return null;
             if (!g.Trappable) return path;

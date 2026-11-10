@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace CardHome
 {
+    // Погода на ближайшую ночь: меняет правила для всех гостей.
+    public enum NightWeather { Clear, Storm, FullMoon }
+
     public class PlacedRoom
     {
         public RoomType Type { get; init; }
@@ -23,6 +26,10 @@ namespace CardHome
         public Vector2Int Entrance { get; } = new Vector2Int(2, 0);
 
         readonly PlacedRoom[,] cells = new PlacedRoom[Width, Height];
+
+        // Состояние дома на эту ночь: погода и кошка, которая поселилась в доме.
+        public NightWeather Weather { get; set; }
+        public bool Cat { get; set; }
 
         public HouseGrid()
         {

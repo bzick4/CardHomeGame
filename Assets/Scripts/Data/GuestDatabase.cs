@@ -42,6 +42,15 @@ namespace CardHome
         int unhappyPenalty = 1;
         public int UnhappyPenalty { get => unhappyPenalty; init => unhappyPenalty = value; } // сколько репутации снимает недовольный
 
+        // С какого уровня гость появляется у соперника (1 — сразу).
+        public int MinStage { get; init; } = 1;
+        public bool Snob { get; init; }        // замечает только улучшенные комнаты (ур. II+)
+        public bool Moonstruck { get; init; }  // в полнолуние сильнее
+        public bool HouseCat { get; init; }    // довольная — остаётся жить в доме и распугивает крыс
+        public bool FearsCat { get; init; }    // в доме живёт кошка — уходит ни с чем
+        public bool Arsonist { get; init; }    // дошёл до цели — поджигает её и соседние комнаты
+        public bool Curser { get; init; }      // недовольная — превращает комнату в подвал
+
         // Постоянные гости: довольный возвращается и платит больше.
         public bool CanBecomeRegular { get; init; }
         public bool Regular { get; private set; }
@@ -121,6 +130,7 @@ namespace CardHome
             Need = 3,
             Ethereal = true,
             HatesWarmth = true,
+            Moonstruck = true,
             Likes = { { RoomType.Nursery, 4 }, { RoomType.Cellar, 2 }, { RoomType.Library, 1 } },
         };
 
@@ -149,6 +159,7 @@ namespace CardHome
             SeekTarget = RoomType.Kitchen,
             Trappable = true,
             CatchReward = 4,
+            Moonstruck = true,
         };
 
         public static readonly GuestDef Gourmet = new GuestDef
@@ -162,7 +173,7 @@ namespace CardHome
             Stamina = 3,
             Need = 7,
             CanBecomeRegular = true,
-            Likes = { { RoomType.Kitchen, 3 }, { RoomType.Dining, 3 }, { RoomType.Cellar, 1 }, { RoomType.Bath, -1 } },
+            Likes = { { RoomType.Kitchen, 3 }, { RoomType.Dining, 3 }, { RoomType.WineCellar, 2 }, { RoomType.Cellar, 1 }, { RoomType.Bath, -1 } },
         };
 
         public static readonly GuestDef Family = new GuestDef
@@ -179,7 +190,7 @@ namespace CardHome
             Likes =
             {
                 { RoomType.Nursery, 4 }, { RoomType.Bedroom, 2 }, { RoomType.Kitchen, 1 },
-                { RoomType.Library, -1 }, { RoomType.Cellar, -3 },
+                { RoomType.Library, -1 }, { RoomType.Cellar, -3 }, { RoomType.WineCellar, -3 },
             },
         };
 
@@ -243,7 +254,102 @@ namespace CardHome
             Need = 2,
             Special = true,
             BreakChance = 50,
-            Likes = { { RoomType.Kitchen, 2 }, { RoomType.Dining, 2 }, { RoomType.Lounge, 1 }, { RoomType.Library, -1 } },
+            Likes =
+            {
+                { RoomType.Kitchen, 2 }, { RoomType.Dining, 2 }, { RoomType.WineCellar, 3 },
+                { RoomType.Lounge, 1 }, { RoomType.Library, -1 },
+            },
+        };
+
+        // ───── Новые гости: открываются с определённого уровня ─────
+
+        public static readonly GuestDef Cat = new GuestDef
+        {
+            Id = "Cat",
+            Tagline = "Гуляет сама по себе",
+            Name = "Кошка",
+            Description = "Бродит где хочет. Довольная остаётся жить в доме — крысы больше не сунутся. Выносливость 4, нужно 3.",
+            Color = RoomDatabase.Hex("e3a35a"),
+            Behaviour = GuestBehaviour.Random,
+            Stamina = 4,
+            Need = 3,
+            HouseCat = true,
+            MinStage = 2,
+            Likes = { { RoomType.Cellar, 3 }, { RoomType.Fireplace, 2 }, { RoomType.Kitchen, 1 }, { RoomType.Bath, -2 } },
+        };
+
+        public static readonly GuestDef Rats = new GuestDef
+        {
+            Id = "Rats",
+            Tagline = "Шуршат за стеной",
+            Name = "Крысы",
+            Description = "Кратчайшим путём бегут в подвал: −2 золота, репутация −1. Ловушка поймает (+2), кошка в доме — даже не сунутся.",
+            Color = RoomDatabase.Hex("7d6a5a"),
+            Behaviour = GuestBehaviour.Seeker,
+            SeekTarget = RoomType.Cellar,
+            Trappable = true,
+            CatchReward = 2,
+            StealAmount = 2,
+            FearsCat = true,
+            MinStage = 2,
+        };
+
+        public static readonly GuestDef Aristocrat = new GuestDef
+        {
+            Id = "Aristocrat",
+            Tagline = "Привык только к лучшему",
+            Name = "Аристократ",
+            Description = "Замечает только улучшенные комнаты (ур. II и выше), обычные ему безразличны. Платит вдвое. Нужно 6.",
+            Color = RoomDatabase.Hex("9b7bd1"),
+            Behaviour = GuestBehaviour.Wanderer,
+            Stamina = 5,
+            Need = 6,
+            Special = true,
+            Snob = true,
+            GoldMultiplier = 2,
+            CanBecomeRegular = true,
+            MinStage = 4,
+            Likes =
+            {
+                { RoomType.Lounge, 2 }, { RoomType.Library, 2 }, { RoomType.Bath, 2 },
+                { RoomType.Bedroom, 2 }, { RoomType.WineCellar, 2 }, { RoomType.Dining, 1 },
+            },
+        };
+
+        public static readonly GuestDef Arsonist = new GuestDef
+        {
+            Id = "Arsonist",
+            Tagline = "Любит смотреть на огонь",
+            Name = "Поджигатель",
+            Description = "Кратчайшим путём идёт к камину. Дошёл — пожар: горят камин и все соседние комнаты, репутация −1. Поймай ловушкой — +5 золота.",
+            Color = RoomDatabase.Hex("e0662f"),
+            Behaviour = GuestBehaviour.Seeker,
+            SeekTarget = RoomType.Fireplace,
+            Trappable = true,
+            CatchReward = 5,
+            Arsonist = true,
+            MinStage = 5,
+        };
+
+        public static readonly GuestDef Witch = new GuestDef
+        {
+            Id = "Witch",
+            Tagline = "Варит зелья по ночам",
+            Name = "Ведьма",
+            Description = "Бродит где хочет, любит подвал и книги. Довольна — платит вдвое. Недовольна — превращает комнату, где закончила путь, в подвал. Нужно 5.",
+            Color = RoomDatabase.Hex("5e8f4a"),
+            Behaviour = GuestBehaviour.Random,
+            Stamina = 5,
+            Need = 5,
+            Special = true,
+            Curser = true,
+            GoldMultiplier = 2,
+            MinStage = 6,
+            Likes =
+            {
+                { RoomType.Cellar, 3 }, { RoomType.WineCellar, 2 }, { RoomType.Library, 2 },
+                { RoomType.Fireplace, 1 }, { RoomType.Nursery, -2 },
+            },
         };
 
         public static readonly GuestDef GhostLord = new GuestDef
@@ -270,11 +376,19 @@ namespace CardHome
         };
 
         // Обычные гости: соперник берёт их поровну, без перекоса в какого-то одного.
-        public static readonly GuestDef[] Pool = { Traveler, Scholar, Ghost, Thief, Wolf, Inspector, Couple, Drunkard, Gourmet, Family, Vampire };
+        public static readonly GuestDef[] Pool =
+        {
+            Traveler, Scholar, Ghost, Thief, Wolf, Inspector, Couple, Drunkard, Gourmet, Family, Vampire,
+            Cat, Rats, Aristocrat, Arsonist, Witch,
+        };
 
         public const int BossChance = 5; // шанс хозяина дома вместо карты в две последние ночи
 
-        public static readonly GuestDef[] All = { Traveler, Scholar, Ghost, Thief, Wolf, Inspector, Couple, Drunkard, Gourmet, Family, Vampire, GhostLord };
+        public static readonly GuestDef[] All =
+        {
+            Traveler, Scholar, Ghost, Thief, Wolf, Inspector, Couple, Drunkard, Gourmet, Family, Vampire,
+            Cat, Rats, Aristocrat, Arsonist, Witch, GhostLord,
+        };
 
         public static GuestDef ById(string id)
         {

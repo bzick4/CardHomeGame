@@ -449,6 +449,9 @@ namespace CardHome
             Opp = new Opponent(Level, rng);
             Opp.Restore(save.OppDeck.Select(DecodeGuest), save.OppHand.Select(DecodeGuest));
 
+            Grid.Weather = (NightWeather)save.Weather;
+            Grid.Cat = save.Cat;
+
             Night = save.Night;
             Gold = save.Gold;
             Reputation = save.Reputation;
@@ -483,6 +486,8 @@ namespace CardHome
                 Discard = discard.Select(c => c.Code).ToList(),
                 Hand = handCards.Select(c => c.Code).ToList(),
                 Fatigue = fatigue,
+                Weather = (int)Grid.Weather,
+                Cat = Grid.Cat,
                 OppDeck = Opp.Deck.Select(EncodeGuest).ToList(),
                 OppHand = Opp.Hand.Select(EncodeGuest).ToList(),
             };
@@ -496,7 +501,12 @@ namespace CardHome
 
         // ───────────── Обучение (день 0) ─────────────
 
-        public void StartTutorial() => LoadThen(HouseDatabase.Level(0), "Обучение", StartTutorialNow);
+        public void StartTutorial()
+        {
+            ResetIntros(); // повтор обучения — и мини-обучения покажутся снова
+            LoadThen(HouseDatabase.Level(0), "Обучение", StartTutorialNow);
+        }
+
 
         void StartTutorialNow()
         {
@@ -549,8 +559,10 @@ namespace CardHome
         void OpeningDeal()
         {
             handCards.Clear();
-            Draw(OpeningHand, false);
             Opp.Draw(Opponent.OpeningHand, 1, false);
+            // Соперник заранее решает, кого выложит первыми, — а игрок сразу получает карты под этих гостей.
+            int pulled = IsTutorial ? 0 : DealForGuests(Opp.PlanOpening(2, Level.Effective(1)), 3);
+            Draw(OpeningHand - pulled, false);
             AddLog($"Раздача: по {OpeningHand} карт тебе и сопернику");
             StartDay(true);
         }
@@ -595,8 +607,12 @@ namespace CardHome
             ExtraActionBought = false;
             SetPhase(Phase.Day);
             AddLog(IsTutorial ? "<b>— День 0 —</b>" : $"<b>— День {Night} —</b>");
+            RollWeather();
             Changed?.Invoke();
             SaveRun();
+            // Первая встреча с погодой или новой картой — мини-обучение (уже после того, как экран обновился).
+            IntroduceWeather(Grid.Weather);
+            IntroduceNewCards();
         }
 
         bool Allowed(Func<TutorialGate, bool> rule) => Gate == null || rule(Gate);
@@ -772,6 +788,7 @@ namespace CardHome
             Opp.Draw(GuestsLeftTonight, Level.Effective(Night), !IsTutorial);
             SetPhase(Phase.Night);
             AddLog(IsTutorial ? "<b>— Ночь 0 —</b>" : $"<b>— Ночь {Night}: гостей {GuestsLeftTonight} —</b>");
+            if (Grid.Weather != NightWeather.Clear) AddLog($"<color=#b9c8ff>{WeatherName}: {WeatherRules}</color>");
             Changed?.Invoke();
             NextGuest();
         }
@@ -818,15 +835,8 @@ namespace CardHome
                 "Соперник выложил гостя на вход. Пунктир показывает, куда он пойдёт.\n\n" +
                 "У тебя один ход в ответ: построй комнату, улучши, почини, перенеси или поверни. " +
                 "Или сразу нажми «Впустить».");
-            if (g.IsThreat)
-                Hint("threat", "Угроза!",
-                    "Вор, волк и вампир идут к цели кратчайшим путём — пунктир показывает маршрут.\n\n" +
-                    "Успей ответом поставить ловушку на пути — она поймает их и принесёт золото.");
-            if (g.Special)
-                Hint("special_" + g.Id, g.Boss ? "Босс: " + g.Name : "Особый гость: " + g.Name,
-                    g.Description + (g.Boss
-                        ? "\n\nХозяин дома может прийти только в две последние ночи."
-                        : "\n\nУ особых гостей своё правило. Приходят так же часто, как остальные."));
+            // Новый гость — мини-обучение (угрозы и особые правила объясняются там же).
+            IntroduceGuest(g);
         }
 
         // Впустить гостя: сразу или после ответного хода.
@@ -863,20 +873,34 @@ namespace CardHome
             Reputation += res.Reputation;
             AddLog(res.Summary);
 
-            if (res.Broke.HasValue)
+            if (res.Broke.HasValue && BreakRoom(res.Broke.Value, res.BreakText))
             {
-                var room = Grid.Get(res.Broke.Value);
-                if (room != null && !room.Broken)
+                foreach (var p in res.Burned) BreakRoom(p, null);
+                Hint("breakage", "Поломка!",
+                    "Недовольный гость иногда что-нибудь ломает (шанс 20%), а волк может разорить кухню.\n\n" +
+                    "Сломанная комната не работает: гостям она только портит настроение (−1), сокровищница не платит, ловушка не ловит.\n\n" +
+                    "Почини: коснись её — это стоит 1 ход. Или купи починку всего дома в лавке.");
+            }
+
+            if (res.Cursed.HasValue)
+            {
+                var p = res.Cursed.Value;
+                var room = Grid.Get(p);
+                if (room != null)
                 {
-                    room.Broken = true;
-                    AddLog(res.BreakText);
-                    Report.Notes.Add(res.BreakText);
-                    RoomBroken?.Invoke(res.Broke.Value);
-                    Hint("breakage", "Поломка!",
-                        "Недовольный гость иногда что-нибудь ломает (шанс 20%), а волк может разорить кухню.\n\n" +
-                        "Сломанная комната не работает: гостям она только портит настроение (−1), сокровищница не платит, ловушка не ловит.\n\n" +
-                        "Почини: коснись её — это стоит 1 ход. Или купи починку всего дома в лавке.");
+                    Grid.Place(p, RoomType.Cellar, room.Doors, room.Level);
+                    AddLog(res.CurseText);
+                    Report.Notes.Add(res.CurseText);
+                    RoomPlaced?.Invoke(p);
                 }
+            }
+
+            if (res.Guest.HouseCat && res.Outcome == Outcome.Satisfied && !Grid.Cat)
+            {
+                Grid.Cat = true;
+                string note = "<color=#ffd34d>Кошка осталась жить в доме — крысы теперь обходят его стороной</color>";
+                AddLog(note);
+                Report.Notes.Add(note);
             }
 
             if (res.BecomesRegular && !IsTutorial)
@@ -891,6 +915,89 @@ namespace CardHome
                     "но если разочаруется — репутация −2.");
             }
             Changed?.Invoke();
+        }
+
+        // Сломать комнату (если она ещё целая). text — запись в журнал и итоги ночи; null — без записи.
+        bool BreakRoom(Vector2Int p, string text)
+        {
+            var room = Grid.Get(p);
+            if (room == null || room.Broken) return false;
+            room.Broken = true;
+            if (text != null)
+            {
+                AddLog(text);
+                Report.Notes.Add(text);
+            }
+            RoomBroken?.Invoke(p);
+            return true;
+        }
+
+        // ───────────── Погода ─────────────
+
+        // Шансы погоды на ночь. Гроза — с 3-го уровня, полнолуние — с 4-го.
+        public const int StormStage = 3, FullMoonStage = 4;
+        public const int StormChance = 25, FullMoonChance = 20;
+
+        public NightWeather Weather => Grid?.Weather ?? NightWeather.Clear;
+
+        public string WeatherName => Weather switch
+        {
+            NightWeather.Storm => "Гроза",
+            NightWeather.FullMoon => "Полнолуние",
+            _ => "",
+        };
+
+        public string WeatherRules => Weather switch
+        {
+            NightWeather.Storm => "все гости устают на 1 комнату раньше, зато камин греет вдвое",
+            NightWeather.FullMoon => "волки вдвое опаснее и вдвое ценнее в ловушке, призраки тревожатся (−2)",
+            _ => "",
+        };
+
+        // Утром становится известна погода на ближайшую ночь — есть день, чтобы подготовиться.
+        void RollWeather()
+        {
+            var w = NightWeather.Clear;
+            if (!IsTutorial)
+            {
+                int stage = Level.Stage;
+                if (stage >= FullMoonStage && rng.Next(100) < FullMoonChance) w = NightWeather.FullMoon;
+                else if (stage >= StormStage && rng.Next(100) < StormChance) w = NightWeather.Storm;
+            }
+            Grid.Weather = w;
+            if (w == NightWeather.Clear) return;
+            AddLog($"<color=#b9c8ff>Прогноз на ночь — {WeatherName.ToLower()}: {WeatherRules}</color>");
+        }
+
+        // ───────────── Стартовая рука ─────────────
+
+        // Достать из колоды до count карт под любимые комнаты будущих гостей (по очереди: лучшее для каждого).
+        // Возвращает, сколько карт пришло в руку.
+        int DealForGuests(IReadOnlyList<GuestDef> guests, int count)
+        {
+            var wishes = guests.Select(g => g.Likes.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value)
+                .Select(kv => kv.Key).ToList()).ToList();
+            var order = new List<RoomType>();
+            for (int rank = 0; rank < 6; rank++)
+                foreach (var w in wishes)
+                    if (rank < w.Count && !order.Contains(w[rank])) order.Add(w[rank]);
+            // Запас: эти комнаты нравятся всем.
+            foreach (var t in new[] { RoomType.Lounge, RoomType.Dining })
+                if (!order.Contains(t)) order.Add(t);
+
+            int dealt = 0;
+            foreach (var t in order)
+            {
+                if (dealt >= count) break;
+                int at = deck.FindLastIndex(c => c.Type == t);
+                if (at < 0) continue;
+                handCards.Add(deck[at]);
+                deck.RemoveAt(at);
+                dealt++;
+            }
+            if (dealt > 0 && guests.Count > 0)
+                AddLog($"<color=#ffd34d>Ты догадываешься, кто придёт первым: {string.Join(" и ", guests.Select(g => g.Name.ToLower()))}. Карты под них уже в руке.</color>");
+            return dealt;
         }
 
         void FinishNight()
@@ -939,7 +1046,7 @@ namespace CardHome
 
             // Награда: выбор 1 из 3 карт. Выбранная придёт в руку уже завтра.
             rewardOptions.Clear();
-            rewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3));
+            rewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3, Level.Stage));
             SetPhase(Phase.Reward);
             Changed?.Invoke();
             Hint("reward", "Награда и лавка",
@@ -1049,7 +1156,7 @@ namespace CardHome
         {
             if (!Pay(RerollPrice)) return;
             rewardOptions.Clear();
-            rewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3));
+            rewardOptions.AddRange(RoomDatabase.RewardOffer(rng, 3, Level.Stage));
             AddLog($"Лавка: награда переброшена (−{RerollPrice})");
             Changed?.Invoke();
         }
